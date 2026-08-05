@@ -182,7 +182,11 @@ void pollTask(void*) {
       WiFiClientSecure client;
       client.setInsecure(); // art installation, not a bank
       HTTPClient http;
-      http.begin(client, POLL_URL);
+      // Random query busts the CDN edge cache (unique URL -> revalidate at
+      // origin) while If-None-Match still lets origin answer 304 when the
+      // content is unchanged. Updates land on the next poll, not "whenever
+      // the edge cache expires".
+      http.begin(client, String(POLL_URL) + "?r=" + String(esp_random()));
       if (etag.length() > 0) http.addHeader("If-None-Match", etag);
       const char* keys[] = {"ETag"};
       http.collectHeaders(keys, 1);
