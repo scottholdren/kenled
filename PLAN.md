@@ -82,26 +82,31 @@ the 16-color constraint structural, not just a UI convention.
 
 ## Part 2 — Hardware Shopping List
 
-Target: ~100 LEDs, indoor installation.
+Target: **89 glass bricks, one LED per brick** (~20 cm centers), indoor
+installation. Grid modeled as 8×10 or 8×11 in the app.
 
 | Item | Spec | Est. cost |
 |---|---|---|
-| LED matrix | WS2812B — either a pre-built 8×8 panel ×2 (buy panels matching the chosen grid) or a 5 V WS2812B strip (30/60 LEDs per meter) cut and mounted into a custom grid | $15–40 |
+| LEDs | **WS2811 12 V 12 mm bullet pixels, 2× 50-count strings, 20 cm wire spacing** (spacing must reach brick centers — don't buy the default 10 cm). 89 used + 11 spares. Press-fit a 12 mm drilled hole, or silicone to the back of each block. | $40–50 |
 | Controller | ✔ **On hand: ESP32-S3-DevKitC-1-N16R8 (×3, AITRIP)** — Wi-Fi + BLE, 16 MB flash, 8 MB PSRAM | $0 |
-| Power supply | **5 V, 10 A** (100 LEDs × 60 mA max = 6 A worst case; headroom is cheap) | $15–25 |
+| Power supply | **12 V, 10 A** (89 px × ~60 mA ≈ 5.4 A worst case; headroom is cheap) | $20–30 |
+| Buck converter | 12 V → 5 V, ≥1 A, to power the ESP32 from the same PSU | $3–5 |
 | Level shifter | 74AHCT125 — shifts the ESP32's 3.3 V data signal to a solid 5 V | $2 |
-| Capacitor | 1000 µF, ≥6.3 V electrolytic across the power rails at the strip | $1 |
-| Resistor | 300–500 Ω on the data line, close to the first LED | $1 |
-| Wiring & connectors | 18 AWG for power, JST-SM 3-pin connectors, barrel jack or screw terminal for the PSU | $10 |
-| Diffusion & mounting | Frame/panel to mount the grid, plus a diffuser (frosted acrylic, foam-core grid + vellum) — this is what makes it look like art instead of bare LEDs | varies |
+| Capacitor | 1000 µF electrolytic (≥16 V) across the power rails at the chain start | $1 |
+| Resistor | 300–500 Ω on the data line at the first pixel (many pixel strings have one built in) | $1 |
+| Wiring & connectors | 18 AWG for power runs, JST-SM 3-pin pigtails, screw terminal for the PSU | $10 |
 
 Wiring notes for the build:
-- Inject power at both ends of the chain (or every ~50 LEDs) to avoid voltage
-  droop / color shift at the far end.
-- **Never** power 100 LEDs through the microcontroller's USB — LEDs get PSU
-  power directly; controller and strip share ground.
-- Strips are usually wired in a **serpentine** (zigzag) pattern; the firmware
-  maps (x, y) → LED index so the app never has to care.
+- ~18–20 m total chain length. 12 V keeps droop manageable — inject power at
+  the chain start and once mid-chain.
+- **Never** power the pixels through the microcontroller's USB — pixels get PSU
+  power directly; controller and pixels share ground.
+- Route the chain through the bricks in a **serpentine** (zigzag) matching the
+  grid; the firmware maps (x, y) → chain index so the app never has to care.
+- Mounting decision (drill 12 mm holes vs. back-mount with silicone): test one
+  brick with a back-mounted pixel in the dark before committing to 89 holes.
+- If the physical brick layout is not a clean rectangle, add a skip-mask to the
+  export + firmware (planned only if needed).
 
 ---
 
@@ -111,7 +116,10 @@ Target hardware (on hand): **ESP32-S3-DevKitC-1-N16R8** ×3.
 
 - Arduino IDE: install the `esp32` boards package (Espressif), select board
   **"ESP32S3 Dev Module"**. 16 MB flash / 8 MB (octal) PSRAM.
-- 3.3 V logic — keep the 74AHCT125 level shifter on the WS2812B data line.
+- 3.3 V logic — keep the 74AHCT125 level shifter on the pixel data line.
+- Bullet pixels are **WS2811, usually RGB order** (vs. the strip's
+  WS2812B/GRB): set `FastLED.addLeds<WS2811, DATA_PIN, RGB>` — confirm color
+  order with the first lit pixel.
 - Data pin: use a plain GPIO (e.g. GPIO 4). Avoid strapping pins (0, 3, 45, 46)
   and USB pins (19, 20).
 - The DevKitC-1 has an **onboard WS2812 RGB LED on GPIO 48** — the firmware
