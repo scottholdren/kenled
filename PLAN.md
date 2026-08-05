@@ -141,6 +141,25 @@ Target hardware (on hand): **ESP32-S3-DevKitC-1-N16R8** ×3.
 
 ---
 
+## Status (2026-08-05)
+
+Everything software is DONE and hardware-verified except the physical string:
+
+- Designer app live (gate passphrase, CGA/Wool palettes, toggle-paint, frames,
+  onion skin, preview, share links, autosave, JSON/animation.h export,
+  **Publish to wall**).
+- Publish pipeline: app -> `current.json` on the `wall` branch -> devices
+  poll the branch-ref API and fetch by commit sha. Sub-60s latency verified.
+- `firmware/kenled-mirror` (T-Dongle-C5): screen mirror + updates. Verified.
+- `firmware/kenled-wall` (ESP32-S3): production controller — FastLED + same
+  update machinery, three compile-time update modes. Verified on the onboard
+  pixel (BENCH_ONBOARD=1); production config compiles (WS2811/RGB, GPIO 4).
+- Hardware ordered: 2× 50ct WS2811 12V bullet strings (20cm), 12V 10A PSU,
+  12V->5V buck, 74AHCT125.
+
+Remaining: physical assembly when the box arrives — first-light color-order
+check, one-brick glow test (drill vs back-mount), then install.
+
 ## Part 4 — Build Order
 
 1. **Repo & deploy skeleton** — Vite + React + TS scaffold, GitHub repo,
