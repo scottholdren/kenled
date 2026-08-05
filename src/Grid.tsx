@@ -11,9 +11,11 @@ interface Props {
   /** Fill tool tap. */
   onFillCell: (cellIndex: number) => void
   fillMode: boolean
+  /** Previous frame to ghost under off cells (onion skin), or null. */
+  onionFrame: number[] | null
 }
 
-function Grid({ design, frameIndex, onStrokeStart, onPaintCell, onFillCell, fillMode }: Props) {
+function Grid({ design, frameIndex, onStrokeStart, onPaintCell, onFillCell, fillMode, onionFrame }: Props) {
   const { cols, rows, palette } = design
   const frame = design.frames[frameIndex]
   // null = no active stroke; otherwise whether the stroke is erasing (right button)
@@ -65,14 +67,22 @@ function Grid({ design, frameIndex, onStrokeStart, onPaintCell, onFillCell, fill
       onPointerCancel={endStroke}
       onContextMenu={(e) => e.preventDefault()}
     >
-      {frame.map((colorIndex, i) => (
-        <div
-          key={i}
-          data-cell={i}
-          className={colorIndex === 0 ? 'cell off' : 'cell'}
-          style={colorIndex === 0 ? undefined : { background: palette[colorIndex], color: palette[colorIndex] }}
-        />
-      ))}
+      {frame.map((colorIndex, i) => {
+        if (colorIndex !== 0) {
+          const c = palette[colorIndex]
+          return <div key={i} data-cell={i} className="cell" style={{ background: c, color: c }} />
+        }
+        const ghost = onionFrame !== null && onionFrame[i] !== 0 ? palette[onionFrame[i]] : null
+        return (
+          <div
+            key={i}
+            data-cell={i}
+            className="cell off"
+            // hex + '3D' = ~24% alpha ghost of the previous frame
+            style={ghost === null ? undefined : { background: `${ghost}3D` }}
+          />
+        )
+      })}
     </div>
   )
 }

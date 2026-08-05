@@ -200,6 +200,91 @@ button.primary {
   box-shadow: 0 0 calc(var(--cell) * 0.35) currentColor;
 }
 
+/* ---- Frame strip ---- */
+
+.framebar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.frames {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  overflow-x: auto;
+  flex: 1;
+  min-width: 200px;
+  padding: 2px;
+}
+
+.frame-thumb {
+  position: relative;
+  padding: 3px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.frame-thumb.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(79, 209, 255, 0.35);
+}
+
+.thumb-canvas {
+  height: 44px;
+  image-rendering: pixelated;
+  border-radius: 4px;
+  display: block;
+}
+
+.frame-num {
+  position: absolute;
+  bottom: 1px;
+  right: 4px;
+  font-size: 0.6rem;
+  color: #fff;
+  text-shadow: 0 0 3px #000, 0 0 3px #000;
+}
+
+.frame-add {
+  width: 36px;
+  height: 50px;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.frame-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.duration {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-left: 0.4rem;
+}
+
+.duration input {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.35rem;
+  width: 4.2rem;
+  text-align: center;
+}
+
 /* ---- Palette ---- */
 
 .palettebar {
