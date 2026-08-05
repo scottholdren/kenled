@@ -3,6 +3,7 @@ import type { Design, Tool } from './types.ts'
 import Grid from './Grid.tsx'
 import Palette from './Palette.tsx'
 import FrameStrip from './FrameStrip.tsx'
+import Preview from './Preview.tsx'
 
 interface Props {
   design: Design
@@ -42,6 +43,7 @@ function Editor({ design, onChange, onNewProject }: Props) {
   const [undoStack, setUndoStack] = useState<HistoryEntry[]>([])
   const [redoStack, setRedoStack] = useState<HistoryEntry[]>([])
   const [confirmNew, setConfirmNew] = useState(false)
+  const [preview, setPreview] = useState(false)
 
   const frame = design.frames[frameIndex]
 
@@ -79,7 +81,7 @@ function Editor({ design, onChange, onNewProject }: Props) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement) return
+      if (preview || e.target instanceof HTMLInputElement) return
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault()
         if (e.shiftKey) redo()
@@ -152,22 +154,39 @@ function Editor({ design, onChange, onNewProject }: Props) {
     onChange({ ...design, palette })
   }
 
+  const exportJson = () => {
+    const blob = new Blob([JSON.stringify(design, null, 2)], { type: 'application/json' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `${design.name.trim() || 'animation'}.json`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
   return (
     <div className="editor">
       <header className="topbar">
         <span className="brand">KenLED</span>
+        <input
+          className="name-input"
+          value={design.name}
+          placeholder="animation name"
+          maxLength={80}
+          onChange={(e) => onChange({ ...design, name: e.target.value })}
+        />
         <span className="grid-info">
           {design.cols}×{design.rows} · {design.cols * design.rows} LEDs · frame {frameIndex + 1}/
           {design.frames.length}
         </span>
+        <button onClick={exportJson}>⇓ Export</button>
         {confirmNew ? (
           <span className="confirm-new">
-            Discard design?
-            <button onClick={onNewProject}>Discard</button>
+            Switch design? (autosaved)
+            <button onClick={onNewProject}>Switch</button>
             <button onClick={() => setConfirmNew(false)}>Cancel</button>
           </span>
         ) : (
-          <button onClick={() => setConfirmNew(true)}>New…</button>
+          <button onClick={() => setConfirmNew(true)}>Projects…</button>
         )}
       </header>
 
@@ -187,19 +206,26 @@ function Editor({ design, onChange, onNewProject }: Props) {
             ↪ Redo
           </button>
           <button onClick={clearFrame}>Clear</button>
+          <button className={preview ? 'active' : ''} onClick={() => setPreview(!preview)}>
+            ▶ Preview
+          </button>
         </div>
       </div>
 
       <div className="stage">
-        <Grid
-          design={design}
-          frameIndex={frameIndex}
-          fillMode={tool === 'fill'}
-          onionFrame={onion && frameIndex > 0 ? design.frames[frameIndex - 1] : null}
-          onStrokeStart={snapshot}
-          onPaintCell={paintCell}
-          onFillCell={fillCell}
-        />
+        {preview ? (
+          <Preview design={design} onClose={() => setPreview(false)} />
+        ) : (
+          <Grid
+            design={design}
+            frameIndex={frameIndex}
+            fillMode={tool === 'fill'}
+            onionFrame={onion && frameIndex > 0 ? design.frames[frameIndex - 1] : null}
+            onStrokeStart={snapshot}
+            onPaintCell={paintCell}
+            onFillCell={fillCell}
+          />
+        )}
       </div>
 
       <FrameStrip

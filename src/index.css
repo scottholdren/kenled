@@ -118,6 +118,56 @@ button.primary {
   font-size: 0.9rem;
 }
 
+.setup-secondary {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.import-error {
+  color: #ff6b60;
+  font-size: 0.85rem;
+}
+
+.saved {
+  width: min(420px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.saved h2 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.saved ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.saved li {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.saved-open {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  text-align: left;
+}
+
+.saved-open span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
 /* ---- Editor layout ---- */
 
 .editor {
@@ -136,6 +186,23 @@ button.primary {
 
 .brand {
   font-weight: 700;
+}
+
+.name-input {
+  font: inherit;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0.3rem 0.5rem;
+  width: 12rem;
+}
+
+.name-input:hover,
+.name-input:focus {
+  border-color: var(--border);
+  background: var(--panel);
+  outline: none;
 }
 
 .grid-info {
@@ -198,6 +265,39 @@ button.primary {
 
 .cell:not(.off) {
   box-shadow: 0 0 calc(var(--cell) * 0.35) currentColor;
+}
+
+/* ---- Preview ---- */
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.preview-grid {
+  background: #000;
+}
+
+.preview-grid .cell.dot {
+  border-radius: 50%;
+}
+
+.preview-grid .cell.dot.off {
+  background: #0d0d12;
+}
+
+.preview-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.preview-info {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- Frame strip ---- */

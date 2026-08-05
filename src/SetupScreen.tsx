@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { MAX_DIM, TARGET_LED_COUNT } from './types.ts'
+import { useRef, useState } from 'react'
+import { MAX_DIM, TARGET_LED_COUNT, type Design } from './types.ts'
+import { validateDesign, type ProjectSummary } from './storage.ts'
 
 const PRESETS: Array<[number, number]> = [
   [8, 8],
@@ -9,17 +10,36 @@ const PRESETS: Array<[number, number]> = [
 ]
 
 interface Props {
+  projects: ProjectSummary[]
   onCreate: (cols: number, rows: number) => void
+  onOpen: (id: string) => void
+  onDelete: (id: string) => void
+  onImport: (design: Design) => void
 }
 
-function SetupScreen({ onCreate }: Props) {
+function SetupScreen({ projects, onCreate, onOpen, onDelete, onImport }: Props) {
   const [cols, setCols] = useState(8)
   const [rows, setRows] = useState(10)
+  const [importError, setImportError] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const count = cols * rows
   const valid = cols >= 1 && rows >= 1 && cols <= MAX_DIM && rows <= MAX_DIM
 
   const clamp = (v: number) => Math.max(1, Math.min(MAX_DIM, Math.floor(v) || 1))
+
+  const handleImportFile = async (file: File) => {
+    try {
+      const design = validateDesign(JSON.parse(await file.text()))
+      if (design === null) {
+        setImportError('Not a valid KenLED design file.')
+        return
+      }
+      onImport(design)
+    } catch {
+      setImportError('Could not read that file as JSON.')
+    }
+  }
 
   return (
     <main className="setup">
@@ -77,6 +97,44 @@ function SetupScreen({ onCreate }: Props) {
       <button className="primary" disabled={!valid} onClick={() => onCreate(cols, rows)}>
         Start designing
       </button>
+
+      <div className="setup-secondary">
+        <button onClick={() => fileRef.current?.click()}>⇪ Import .json</button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".json,application/json"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) void handleImportFile(file)
+            e.target.value = ''
+          }}
+        />
+      </div>
+      {importError !== null && <p className="import-error">{importError}</p>}
+
+      {projects.length > 0 && (
+        <section className="saved">
+          <h2>Saved designs</h2>
+          <ul>
+            {projects.map((p) => (
+              <li key={p.id}>
+                <button className="saved-open" onClick={() => onOpen(p.id)}>
+                  <strong>{p.name}</strong>
+                  <span>
+                    {p.cols}×{p.rows} · {p.frameCount} frame{p.frameCount === 1 ? '' : 's'} ·{' '}
+                    {new Date(p.updatedAt).toLocaleDateString()}
+                  </span>
+                </button>
+                <button className="saved-delete" title="Delete design" onClick={() => onDelete(p.id)}>
+                  🗑
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </main>
   )
 }
