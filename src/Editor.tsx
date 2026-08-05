@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Design, Tool } from './types.ts'
 import Grid from './Grid.tsx'
 import Palette from './Palette.tsx'
@@ -66,9 +66,14 @@ function Editor({ design, onChange, onNewProject }: Props) {
     onChange({ ...design, frames })
   }
 
+  // Set once per stroke: painting a cell that already has the selected color
+  // turns the stroke into an erase (click-to-toggle, drag stays consistent).
+  const strokeToggle = useRef<boolean | null>(null)
+
   const snapshot = () => {
     setUndoStack((u) => [...u.slice(-49), { frames: design.frames, frame: frameIndex }])
     setRedoStack([])
+    strokeToggle.current = null
   }
 
   const undo = () => {
@@ -104,7 +109,10 @@ function Editor({ design, onChange, onNewProject }: Props) {
   })
 
   const paintCell = (cell: number, erase: boolean) => {
-    const color = erase || tool === 'erase' ? 0 : selectedColor
+    if (strokeToggle.current === null) {
+      strokeToggle.current = !erase && tool === 'paint' && frame[cell] === selectedColor
+    }
+    const color = erase || tool === 'erase' || strokeToggle.current ? 0 : selectedColor
     if (frame[cell] === color) return
     const next = frame.slice()
     next[cell] = color
