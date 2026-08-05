@@ -4,3 +4,4 @@ dist
 .DS_Store
 .gstack/
 firmware/kenled-mirror/wifi_secrets.h
+firmware/kenled-wall/wifi_secrets.h
