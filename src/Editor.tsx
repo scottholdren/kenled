@@ -7,6 +7,7 @@ import Preview from './Preview.tsx'
 import { designToHeader } from './exportHeader.ts'
 import { designToShareUrl } from './share.ts'
 import { getToken, publishDesign, setToken, clearToken, TOKEN_HELP_URL } from './publish.ts'
+import { PRESET_PALETTES } from './palette.ts'
 
 interface Props {
   design: Design
@@ -348,12 +349,26 @@ function Editor({ design, onChange, onNewProject }: Props) {
       />
 
       <footer className="palettebar">
-        <Palette
-          palette={design.palette}
-          selected={selectedColor}
-          onSelect={setSelectedColor}
-          onEditColor={editColor}
-        />
+        <div className="palette-row">
+          <div className="palette-presets">
+            {PRESET_PALETTES.map((p) => (
+              <button
+                key={p.name}
+                className={design.palette.join() === p.colors.join() ? 'preset-mini active' : 'preset-mini'}
+                title={`Switch this project's palette to ${p.name} (repaints existing pixels)`}
+                onClick={() => onChange({ ...design, palette: p.colors })}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+          <Palette
+            palette={design.palette}
+            selected={selectedColor}
+            onSelect={setSelectedColor}
+            onEditColor={editColor}
+          />
+        </div>
         <p className="hint">
           Click/drag to paint · right-click to erase · ←/→ switch frames · ✎ edits the selected color
         </p>

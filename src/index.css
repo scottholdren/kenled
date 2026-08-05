@@ -447,6 +447,29 @@ button.primary {
   border-top: 1px solid var(--border);
 }
 
+.palette-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.palette-presets {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.preset-mini {
+  font-size: 0.75rem;
+  padding: 0.3rem 0.55rem;
+}
+
+.preset-mini.active {
+  border-color: var(--accent);
+  background: #10222c;
+}
+
 .palette {
   display: flex;
   flex-wrap: wrap;
