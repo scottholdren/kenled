@@ -251,7 +251,12 @@ function Editor({ design, onChange, onNewProject }: Props) {
             design={design}
             frameIndex={frameIndex}
             fillMode={tool === 'fill'}
-            onionFrame={onion && frameIndex > 0 ? design.frames[frameIndex - 1] : null}
+            onionFrame={
+            // wraps: frame 1 ghosts the final frame, for designing seamless loops
+            onion && design.frames.length > 1
+              ? design.frames[(frameIndex - 1 + design.frames.length) % design.frames.length]
+              : null
+          }
             onStrokeStart={snapshot}
             onPaintCell={paintCell}
             onFillCell={fillCell}
