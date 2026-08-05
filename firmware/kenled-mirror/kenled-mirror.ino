@@ -22,11 +22,10 @@
 #define PIN_LCD_RST 1
 #define PIN_LCD_BL 0 // backlight is ACTIVE LOW: write 0 to turn on
 
-// Onboard APA102 pixel — driven explicitly (floating lines pick up SPI noise
-// and sparkle). It mirrors the grid's top-left cell, like the wall's pixel #1.
+// Onboard APA102 pixel — held off. It must still be driven once at boot:
+// left floating, its lines pick up SPI noise and it sparkles.
 #define PIN_LED_CI 4
 #define PIN_LED_DI 5
-#define LED_BRIGHT 4 // 0-31; the APA102 is eye-searing above single digits
 
 // Panel quirk dials. The INITR_MINI160x80_PLUGIN init already handles this
 // panel's IPS inversion, so both stay off. Diagnosis by what red renders as:
@@ -59,12 +58,10 @@ void apa102Byte(uint8_t v) {
   }
 }
 
-void apa102Set(uint32_t rgb) {
+void apa102Off() {
   apa102Byte(0); apa102Byte(0); apa102Byte(0); apa102Byte(0); // start frame
-  apa102Byte(0xE0 | LED_BRIGHT);
-  apa102Byte(rgb & 0xFF);         // B
-  apa102Byte((rgb >> 8) & 0xFF);  // G
-  apa102Byte((rgb >> 16) & 0xFF); // R
+  apa102Byte(0xE0); // brightness 0
+  apa102Byte(0); apa102Byte(0); apa102Byte(0); // B G R
   apa102Byte(0xFF); apa102Byte(0xFF); apa102Byte(0xFF); apa102Byte(0xFF); // end
 }
 
@@ -76,7 +73,6 @@ void drawFrame(const uint8_t* frame) {
     canvas.fillRect(x, y, cellSize - 1, cellSize - 1, color565(ANIM_PALETTE[frame[i]]));
   }
   tft.drawRGBBitmap(0, 0, canvas.getBuffer(), canvas.width(), canvas.height());
-  apa102Set(ANIM_PALETTE[frame[0]]); // onboard pixel mirrors top-left cell
 }
 
 void setup() {
@@ -94,7 +90,7 @@ void setup() {
   pinMode(PIN_LED_CI, OUTPUT);
   pinMode(PIN_LED_DI, OUTPUT);
   digitalWrite(PIN_LED_CI, LOW);
-  apa102Set(0x000000); // stop the floating-line sparkle
+  apa102Off();
 
   uint16_t w = canvas.width();
   uint16_t h = canvas.height();

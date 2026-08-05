@@ -7,7 +7,7 @@
 #define ANIM_COLS 10
 #define ANIM_ROWS 8
 #define ANIM_NUM_LEDS 80
-#define ANIM_FRAME_COUNT 12
+#define ANIM_FRAME_COUNT 11
 #define ANIM_FRAME_MS 125
 
 // 16-color palette, 0xRRGGBB. Index 0 is "off".
@@ -104,13 +104,5 @@ static const uint8_t ANIM_FRAMES[ANIM_FRAME_COUNT][ANIM_NUM_LEDS] = {
     10,10,10,10,10,10,10,10,10,4,
     0,0,0,0,0,0,0,0,0,4,
     0,0,0,0,0,0,0,0,0,4,
-    0,0,0,0,0,0,0,0,0,4 },
-  { 0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0 }
+    0,0,0,0,0,0,0,0,0,4 }
 };
