@@ -4,6 +4,7 @@ import Grid from './Grid.tsx'
 import Palette from './Palette.tsx'
 import FrameStrip from './FrameStrip.tsx'
 import Preview from './Preview.tsx'
+import { designToHeader } from './exportHeader.ts'
 
 interface Props {
   design: Design
@@ -154,14 +155,19 @@ function Editor({ design, onChange, onNewProject }: Props) {
     onChange({ ...design, palette })
   }
 
-  const exportJson = () => {
-    const blob = new Blob([JSON.stringify(design, null, 2)], { type: 'application/json' })
+  const download = (filename: string, content: string, type: string) => {
+    const blob = new Blob([content], { type })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `${design.name.trim() || 'animation'}.json`
+    a.download = filename
     a.click()
     URL.revokeObjectURL(a.href)
   }
+
+  const exportJson = () =>
+    download(`${design.name.trim() || 'animation'}.json`, JSON.stringify(design, null, 2), 'application/json')
+
+  const exportHeader = () => download('animation.h', designToHeader(design), 'text/x-c')
 
   return (
     <div className="editor">
@@ -178,7 +184,10 @@ function Editor({ design, onChange, onNewProject }: Props) {
           {design.cols}×{design.rows} · {design.cols * design.rows} LEDs · frame {frameIndex + 1}/
           {design.frames.length}
         </span>
-        <button onClick={exportJson}>⇓ Export</button>
+        <button onClick={exportJson}>⇓ .json</button>
+        <button onClick={exportHeader} title="Arduino header for the firmware sketch">
+          ⇓ animation.h
+        </button>
         {confirmNew ? (
           <span className="confirm-new">
             Switch design? (autosaved)

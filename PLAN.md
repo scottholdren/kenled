@@ -47,13 +47,11 @@ Two deliverables:
 - Autosave to localStorage; project manager (multiple named designs).
 - Export / import `.json` design files.
 
-**Milestone 4 — Publish & hardware export**
-- **Export as Arduino header (`animation.h`)** — palette + frame data as
-  `PROGMEM` arrays for the compile-and-upload workflow.
-- **Publish as JSON at a known URL** — the app writes `animation.json` into the
-  repo (via a "download, commit, push" flow or the GitHub API), so the ESP32 can
-  fetch it over Wi-Fi. Simplest v1: designer downloads `animation.json` and
-  commits it to the repo; Pages serves it; the ESP32 polls it.
+**Milestone 4 — Hardware export**
+- **Export as Arduino header (`animation.h`)** — palette + frame data as C
+  arrays. The designer exports the header, drops it into the firmware sketch,
+  and flashes once. (Scope decision: this is a flash-once, one-show
+  installation — no Wi-Fi update loop needed.)
 
 ### Animation data format
 
@@ -112,20 +110,18 @@ Target hardware (on hand): **ESP32-S3-DevKitC-1-N16R8** ×3.
 - 3.3 V logic — keep the 74AHCT125 level shifter on the WS2812B data line.
 - Data pin: use a plain GPIO (e.g. GPIO 4). Avoid strapping pins (0, 3, 45, 46)
   and USB pins (19, 20).
-- The DevKitC-1 has an **onboard WS2812 RGB LED on GPIO 48** — the full
-  firmware (including Wi-Fi fetch/parse) can be developed and tested against
-  that single pixel before the matrix hardware arrives.
-- 16 MB flash leaves room for a LittleFS partition to cache many animations.
+- The DevKitC-1 has an **onboard WS2812 RGB LED on GPIO 48** — the firmware
+  can be bench-tested against that single pixel before the matrix arrives.
 
-- **Arduino IDE + FastLED** (or Adafruit NeoPixel) targeting the ESP32-S3.
+- **Arduino IDE + FastLED** targeting the ESP32-S3.
+- Scope: **flash once for the show.** The animation is compiled in from the
+  exported `animation.h`; the sketch loops it forever. No Wi-Fi, no runtime
+  updates. To change the animation: re-export the header, re-flash.
 - Responsibilities:
   - Serpentine coordinate mapping `(x, y) → led index`, matching the physical wiring.
   - Global brightness cap and FastLED power limiting (`setMaxPowerInVoltsAndMilliamps`)
     as a safety net for the PSU.
-  - **Mode A (v1):** play an animation compiled in from the exported `animation.h`.
-  - **Mode B (v2):** connect to Wi-Fi, poll `https://<user>.github.io/kenled/animation.json`
-    every few minutes, parse (ArduinoJson), store the latest animation in flash,
-    play it — and keep playing the cached one if the network drops.
+  - Loop the compiled-in animation at its frame rate, all night.
 
 ---
 
@@ -136,11 +132,9 @@ Target hardware (on hand): **ESP32-S3-DevKitC-1-N16R8** ×3.
 2. **Milestones 1–3 of the app** — grid setup → painting → frames → preview →
    save/load. The designer can fully author animations before any hardware exists.
 3. **Order hardware** (can overlap with step 2 — shipping takes time).
-4. **Milestone 4 exports** + firmware Mode A — light up the real matrix from an
+4. **Milestone 4 export + firmware** — light up the real matrix from an
    exported header file.
-5. **Firmware Mode B** — Wi-Fi fetch, closing the loop: design in browser,
-   see it on the wall.
-6. **Physical install** — mounting, diffusion, power routing, final placement.
+5. **Physical install** — mounting, diffusion, power routing, final placement.
 
 ## Open decisions
 
@@ -148,5 +142,5 @@ Target hardware (on hand): **ESP32-S3-DevKitC-1-N16R8** ×3.
   fix the grid pitch; hand-built from strips lets you match the art's dimensions.
 - **Exact grid dimensions** — decide before ordering (drives panel vs. strip choice).
 - ~~ESP32 vs. plain Arduino~~ — **resolved**: ESP32-S3-DevKitC-1-N16R8 boards on hand.
-- **How "publish" works in v1** — manual commit of `animation.json` vs. GitHub
-  API integration from the app.
+- ~~How "publish" works~~ — **resolved**: flash-once for the show; the animation
+  ships compiled into the firmware via `animation.h`. No runtime updates.
