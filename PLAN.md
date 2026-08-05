@@ -85,7 +85,7 @@ Target: ~100 LEDs, indoor installation.
 | Item | Spec | Est. cost |
 |---|---|---|
 | LED matrix | WS2812B — either a pre-built 8×8 panel ×2 (buy panels matching the chosen grid) or a 5 V WS2812B strip (30/60 LEDs per meter) cut and mounted into a custom grid | $15–40 |
-| Controller | **ESP32 dev board** (recommended — Wi-Fi, Arduino-IDE compatible). Fallback: Arduino Nano/Uno | $8–12 |
+| Controller | ✔ **On hand: ESP32-S3-DevKitC-1-N16R8 (×3, AITRIP)** — Wi-Fi + BLE, 16 MB flash, 8 MB PSRAM | $0 |
 | Power supply | **5 V, 10 A** (100 LEDs × 60 mA max = 6 A worst case; headroom is cheap) | $15–25 |
 | Level shifter | 74AHCT125 — shifts the ESP32's 3.3 V data signal to a solid 5 V | $2 |
 | Capacitor | 1000 µF, ≥6.3 V electrolytic across the power rails at the strip | $1 |
@@ -105,7 +105,19 @@ Wiring notes for the build:
 
 ## Part 3 — Player Firmware
 
-- **Arduino IDE + FastLED** (or Adafruit NeoPixel) targeting the ESP32.
+Target hardware (on hand): **ESP32-S3-DevKitC-1-N16R8** ×3.
+
+- Arduino IDE: install the `esp32` boards package (Espressif), select board
+  **"ESP32S3 Dev Module"**. 16 MB flash / 8 MB (octal) PSRAM.
+- 3.3 V logic — keep the 74AHCT125 level shifter on the WS2812B data line.
+- Data pin: use a plain GPIO (e.g. GPIO 4). Avoid strapping pins (0, 3, 45, 46)
+  and USB pins (19, 20).
+- The DevKitC-1 has an **onboard WS2812 RGB LED on GPIO 48** — the full
+  firmware (including Wi-Fi fetch/parse) can be developed and tested against
+  that single pixel before the matrix hardware arrives.
+- 16 MB flash leaves room for a LittleFS partition to cache many animations.
+
+- **Arduino IDE + FastLED** (or Adafruit NeoPixel) targeting the ESP32-S3.
 - Responsibilities:
   - Serpentine coordinate mapping `(x, y) → led index`, matching the physical wiring.
   - Global brightness cap and FastLED power limiting (`setMaxPowerInVoltsAndMilliamps`)
@@ -135,6 +147,6 @@ Wiring notes for the build:
 - **Panels vs. strip-built matrix:** pre-built 8×8 panels are plug-and-play but
   fix the grid pitch; hand-built from strips lets you match the art's dimensions.
 - **Exact grid dimensions** — decide before ordering (drives panel vs. strip choice).
-- **ESP32 vs. plain Arduino** — ESP32 recommended for the Wi-Fi update loop.
+- ~~ESP32 vs. plain Arduino~~ — **resolved**: ESP32-S3-DevKitC-1-N16R8 boards on hand.
 - **How "publish" works in v1** — manual commit of `animation.json` vs. GitHub
   API integration from the app.
