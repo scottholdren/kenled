@@ -85,6 +85,10 @@ the 16-color constraint structural, not just a UI convention.
 Target: **89 glass bricks, one LED per brick** (~20 cm centers), indoor
 installation. Grid modeled as 8×10 or 8×11 in the app.
 
+Concrete order (2026-08-05): 2× ALITOVE WS2811 12V 50ct 8in-spacing bullet
+strings (amzn B0BF4WBF41), ALITOVE 12V 10A PSU (B0FW512YH9), 12V→5V 5A buck,
+SN74AHCT125N, barrel-jack screw-terminal adapter. ~$85 total.
+
 | Item | Spec | Est. cost |
 |---|---|---|
 | LEDs | **WS2811 12 V 12 mm bullet pixels, 2× 50-count strings, 20 cm wire spacing** (spacing must reach brick centers — don't buy the default 10 cm). 89 used + 11 spares. Press-fit a 12 mm drilled hole, or silicone to the back of each block. | $40–50 |
