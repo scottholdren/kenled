@@ -22,7 +22,13 @@
 // Credentials live in wifi_secrets.h (gitignored; see wifi_secrets.h.example —
 // this repo is public, so they must never be committed).
 #include "wifi_secrets.h"
-#define POLL_URL "https://raw.githubusercontent.com/scottholdren/kenled/wall/current.json"
+// Freshness scheme: the branch-ref API tells us the latest wall commit (the
+// API is never CDN-cached, and 304 conditional responses don't count against
+// GitHub's rate limit), then content is fetched by commit sha — an immutable
+// URL the CDN can't serve stale. Plain raw branch URLs sit behind an edge
+// cache that ignores query strings, so they can lag pushes by many minutes.
+#define REF_URL "https://api.github.com/repos/scottholdren/kenled/git/ref/heads/wall"
+#define RAW_BASE "https://raw.githubusercontent.com/scottholdren/kenled/"
 #define POLL_INTERVAL_MS 60000UL
 #define CACHE_PATH "/current.json"
 
@@ -166,8 +172,40 @@ void drawFrame(uint16_t fi) {
 
 // ---- Wi-Fi polling (background task) ----
 
+// Fetch current.json at a specific commit and stage it for the main loop.
+void fetchAnimation(const String& sha) {
+  WiFiClientSecure client;
+  client.setInsecure(); // art installation, not a bank
+  HTTPClient http;
+  http.begin(client, RAW_BASE + sha + "/current.json");
+  int code = http.GET();
+  if (code == 200) {
+    String body = http.getString();
+    Anim* a = parseAnim(body);
+    if (a != nullptr) {
+      File f = LittleFS.open(CACHE_PATH, "w");
+      if (f) {
+        f.print(body);
+        f.close();
+      }
+      xSemaphoreTake(pendingMux, portMAX_DELAY);
+      freeAnim(pending);
+      pending = a;
+      xSemaphoreGive(pendingMux);
+      Serial.printf("[poll] updated to %s: %ux%u %u frames\n", sha.substring(0, 7).c_str(), a->cols,
+                    a->rows, a->frameCount);
+    } else {
+      Serial.println("[poll] fetched but invalid animation json");
+    }
+  } else {
+    Serial.printf("[poll] raw fetch HTTP %d\n", code);
+  }
+  http.end();
+}
+
 void pollTask(void*) {
-  String etag = "";
+  String refEtag = "";
+  String lastSha = "";
   for (;;) {
     if (WiFi.status() != WL_CONNECTED) {
       wifiUp = false;
@@ -180,43 +218,38 @@ void pollTask(void*) {
     if (WiFi.status() == WL_CONNECTED) {
       wifiUp = true;
       WiFiClientSecure client;
-      client.setInsecure(); // art installation, not a bank
+      client.setInsecure();
       HTTPClient http;
-      // Random query busts the CDN edge cache (unique URL -> revalidate at
-      // origin) while If-None-Match still lets origin answer 304 when the
-      // content is unchanged. Updates land on the next poll, not "whenever
-      // the edge cache expires".
-      http.begin(client, String(POLL_URL) + "?r=" + String(esp_random()));
-      if (etag.length() > 0) http.addHeader("If-None-Match", etag);
+      http.begin(client, REF_URL);
+      http.setUserAgent("kenled-dongle"); // GitHub API requires a User-Agent
+      if (refEtag.length() > 0) http.addHeader("If-None-Match", refEtag);
       const char* keys[] = {"ETag"};
       http.collectHeaders(keys, 1);
       int code = http.GET();
       if (code == 304) {
         lastFetchOkAt = millis();
-        Serial.println("[poll] 304 not modified");
+        Serial.println("[poll] ref unchanged");
+        http.end();
       } else if (code == 200) {
-        String body = http.getString();
-        Anim* a = parseAnim(body);
-        if (a != nullptr) {
-          File f = LittleFS.open(CACHE_PATH, "w");
-          if (f) {
-            f.print(body);
-            f.close();
+        String etag = http.header("ETag");
+        JsonDocument doc;
+        DeserializationError err = deserializeJson(doc, http.getString());
+        http.end();
+        const char* sha = doc["object"]["sha"] | "";
+        if (err == DeserializationError::Ok && strlen(sha) == 40) {
+          if (lastSha != sha) {
+            fetchAnimation(String(sha));
+            lastSha = sha;
           }
-          xSemaphoreTake(pendingMux, portMAX_DELAY);
-          freeAnim(pending);
-          pending = a;
-          xSemaphoreGive(pendingMux);
-          etag = http.header("ETag");
+          refEtag = etag;
           lastFetchOkAt = millis();
-          Serial.printf("[poll] 200 updated: %ux%u %u frames\n", a->cols, a->rows, a->frameCount);
         } else {
-          Serial.println("[poll] 200 but invalid animation json");
+          Serial.println("[poll] bad ref response");
         }
       } else {
-        Serial.printf("[poll] HTTP %d\n", code);
+        Serial.printf("[poll] ref HTTP %d\n", code);
+        http.end();
       }
-      http.end();
     }
     vTaskDelay(pdMS_TO_TICKS(POLL_INTERVAL_MS));
   }
