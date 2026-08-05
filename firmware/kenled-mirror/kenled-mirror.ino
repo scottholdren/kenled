@@ -51,16 +51,19 @@ uint16_t color565(uint32_t rgb) {
   return SWAP_RB ? tft.color565(b, g, r) : tft.color565(r, g, b);
 }
 
-void apa102Off() {
-  // No 0xFF end frame! 0xFF bytes double as a full-white LED frame, and
-  // SK9822-style clones apply the last pending frame at the NEXT start frame
-  // — which made the "off" command itself flash white. Zeros are never a
-  // valid LED frame; the trailing zero run is both the end clocks and a
-  // second start frame that makes double-buffered clones apply the off now.
+// The pixel can't be kept dark (it hears every LCD byte and no code can stop
+// a mid-blit latch), so hold it at a steady color instead — a constant glow
+// masks the per-frame garbage latches that read as blinking against dark.
+#define STATUS_BRIGHT 4 // 0-31
+
+void apa102Steady() {
+  // Zeros-only framing: 0xFF tails read as a white LED frame on SK9822-style
+  // clones (applied at the next start frame). The trailing zero run is both
+  // the end clocks and the apply-trigger for double-buffered clones.
   SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
   for (int i = 0; i < 4; i++) SPI.transfer(0x00); // start frame
-  SPI.transfer(0xE0); // brightness 0
-  SPI.transfer(0); SPI.transfer(0); SPI.transfer(0); // B G R
+  SPI.transfer(0xE0 | STATUS_BRIGHT);
+  SPI.transfer(255); SPI.transfer(255); SPI.transfer(255); // B G R — white
   for (int i = 0; i < 8; i++) SPI.transfer(0x00); // apply-trigger + end clocks
   SPI.endTransaction();
 }
@@ -73,7 +76,7 @@ void drawFrame(const uint8_t* frame) {
     canvas.fillRect(x, y, cellSize - 1, cellSize - 1, color565(ANIM_PALETTE[frame[i]]));
   }
   tft.drawRGBBitmap(0, 0, canvas.getBuffer(), canvas.width(), canvas.height());
-  apa102Off(); // re-assert every frame in case anything glitches the pixel
+  apa102Steady(); // re-assert every frame over the blit garbage
 }
 
 void setup() {
@@ -88,7 +91,7 @@ void setup() {
   pinMode(PIN_LCD_BL, OUTPUT);
   digitalWrite(PIN_LCD_BL, LOW); // on
 
-  apa102Off();
+  apa102Steady();
 
   uint16_t w = canvas.width();
   uint16_t h = canvas.height();
