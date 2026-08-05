@@ -31,6 +31,7 @@
 #define RAW_BASE "https://raw.githubusercontent.com/scottholdren/kenled/"
 #define POLL_INTERVAL_MS 60000UL
 #define CACHE_PATH "/current.json"
+#define INCOMING_PATH "/incoming.json"
 
 // ---- T-Dongle-C5 fixed wiring (from LilyGo's pin_config.h) ----
 #define PIN_LCD_MOSI 2
@@ -99,9 +100,7 @@ void apa102Steady() {
 
 // ---- Animation parsing (same rules as the app's importer) ----
 
-Anim* parseAnim(const String& json) {
-  JsonDocument doc;
-  if (deserializeJson(doc, json) != DeserializationError::Ok) return nullptr;
+Anim* animFromDoc(JsonDocument& doc) {
   int cols = doc["cols"] | 0;
   int rows = doc["rows"] | 0;
   JsonArray pal = doc["palette"];
@@ -139,6 +138,22 @@ Anim* parseAnim(const String& json) {
   return a;
 }
 
+// Parse an animation from a LittleFS file. Parsing from flash (not from a
+// String while TLS buffers are alive) keeps peak heap low enough for big
+// multi-frame animations.
+Anim* parseAnimFile(const char* path) {
+  File f = LittleFS.open(path, "r");
+  if (!f) return nullptr;
+  JsonDocument doc;
+  DeserializationError err = deserializeJson(doc, f);
+  f.close();
+  if (err != DeserializationError::Ok) {
+    Serial.printf("[parse] %s: %s\n", path, err.c_str());
+    return nullptr;
+  }
+  return animFromDoc(doc);
+}
+
 void applyAnim(Anim* a) {
   freeAnim(current);
   current = a;
@@ -173,34 +188,43 @@ void drawFrame(uint16_t fi) {
 // ---- Wi-Fi polling (background task) ----
 
 // Fetch current.json at a specific commit and stage it for the main loop.
+// Streams to flash and frees the TLS connection BEFORE parsing — parsing a
+// large animation while TLS buffers are alive can exhaust the heap.
 void fetchAnimation(const String& sha) {
-  WiFiClientSecure client;
-  client.setInsecure(); // art installation, not a bank
-  HTTPClient http;
-  http.begin(client, RAW_BASE + sha + "/current.json");
-  int code = http.GET();
-  if (code == 200) {
-    String body = http.getString();
-    Anim* a = parseAnim(body);
-    if (a != nullptr) {
-      File f = LittleFS.open(CACHE_PATH, "w");
+  bool downloaded = false;
+  {
+    WiFiClientSecure client;
+    client.setInsecure(); // art installation, not a bank
+    HTTPClient http;
+    http.begin(client, RAW_BASE + sha + "/current.json");
+    int code = http.GET();
+    if (code == 200) {
+      File f = LittleFS.open(INCOMING_PATH, "w");
       if (f) {
-        f.print(body);
+        http.writeToStream(&f);
         f.close();
+        downloaded = true;
       }
-      xSemaphoreTake(pendingMux, portMAX_DELAY);
-      freeAnim(pending);
-      pending = a;
-      xSemaphoreGive(pendingMux);
-      Serial.printf("[poll] updated to %s: %ux%u %u frames\n", sha.substring(0, 7).c_str(), a->cols,
-                    a->rows, a->frameCount);
     } else {
-      Serial.println("[poll] fetched but invalid animation json");
+      Serial.printf("[poll] raw fetch HTTP %d\n", code);
     }
+    http.end();
+  } // TLS + HTTP freed here
+
+  if (!downloaded) return;
+  Anim* a = parseAnimFile(INCOMING_PATH);
+  if (a != nullptr) {
+    LittleFS.remove(CACHE_PATH);
+    LittleFS.rename(INCOMING_PATH, CACHE_PATH);
+    xSemaphoreTake(pendingMux, portMAX_DELAY);
+    freeAnim(pending);
+    pending = a;
+    xSemaphoreGive(pendingMux);
+    Serial.printf("[poll] updated to %s: %ux%u %u frames\n", sha.substring(0, 7).c_str(), a->cols,
+                  a->rows, a->frameCount);
   } else {
-    Serial.printf("[poll] raw fetch HTTP %d\n", code);
+    Serial.println("[poll] fetched but invalid animation json");
   }
-  http.end();
 }
 
 void pollTask(void*) {
@@ -291,13 +315,8 @@ void setup() {
   // Boot animation: LittleFS cache first, compiled-in fallback second.
   Anim* boot = nullptr;
   if (LittleFS.begin(true)) {
-    File f = LittleFS.open(CACHE_PATH, "r");
-    if (f) {
-      String body = f.readString();
-      f.close();
-      boot = parseAnim(body);
-      if (boot != nullptr) Serial.println("[boot] playing cached animation");
-    }
+    boot = parseAnimFile(CACHE_PATH);
+    if (boot != nullptr) Serial.println("[boot] playing cached animation");
   }
   if (boot == nullptr) {
     boot = builtinAnim();
