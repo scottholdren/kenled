@@ -5,6 +5,7 @@ import Palette from './Palette.tsx'
 import FrameStrip from './FrameStrip.tsx'
 import Preview from './Preview.tsx'
 import { designToHeader } from './exportHeader.ts'
+import { designToShareUrl } from './share.ts'
 
 interface Props {
   design: Design
@@ -45,6 +46,7 @@ function Editor({ design, onChange, onNewProject }: Props) {
   const [redoStack, setRedoStack] = useState<HistoryEntry[]>([])
   const [confirmNew, setConfirmNew] = useState(false)
   const [preview, setPreview] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const frame = design.frames[frameIndex]
 
@@ -169,6 +171,23 @@ function Editor({ design, onChange, onNewProject }: Props) {
 
   const exportHeader = () => download('animation.h', designToHeader(design), 'text/x-c')
 
+  const share = async () => {
+    const url = await designToShareUrl(design)
+    try {
+      await navigator.clipboard.writeText(url)
+    } catch {
+      // clipboard API can be permission-blocked; fall back to execCommand
+      const ta = document.createElement('textarea')
+      ta.value = url
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      ta.remove()
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
   return (
     <div className="editor">
       <header className="topbar">
@@ -184,6 +203,9 @@ function Editor({ design, onChange, onNewProject }: Props) {
           {design.cols}×{design.rows} · {design.cols * design.rows} LEDs · frame {frameIndex + 1}/
           {design.frames.length}
         </span>
+        <button onClick={() => void share()} title="Copy a link that contains this whole design">
+          {copied ? '✓ Copied' : '🔗 Share'}
+        </button>
         <button onClick={exportJson}>⇓ .json</button>
         <button onClick={exportHeader} title="Arduino header for the firmware sketch">
           ⇓ animation.h

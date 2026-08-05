@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createDesign, type Design } from './types.ts'
 import { DEFAULT_PALETTE } from './palette.ts'
 import {
@@ -11,6 +11,7 @@ import {
   setCurrent,
   type ProjectSummary,
 } from './storage.ts'
+import { designFromHash } from './share.ts'
 import SetupScreen from './SetupScreen.tsx'
 import Editor from './Editor.tsx'
 
@@ -27,6 +28,26 @@ function App() {
     saveProject(id, design)
     setProject({ id, design })
   }
+
+  useEffect(() => {
+    // Ask the browser to exempt our storage from eviction (best-effort).
+    void navigator.storage?.persist?.().catch(() => {})
+    // A share link in the URL opens as a new project, then the hash is cleared
+    // so a reload doesn't re-import it. hashchange covers links pasted into an
+    // already-open tab (same-document navigation, no reload).
+    const importFromHash = () => {
+      void designFromHash(location.hash).then((design) => {
+        if (design !== null) {
+          history.replaceState(null, '', location.pathname + location.search)
+          openDesign(newId(), design)
+        }
+      })
+    }
+    importFromHash()
+    window.addEventListener('hashchange', importFromHash)
+    return () => window.removeEventListener('hashchange', importFromHash)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   if (project === null) {
     return (

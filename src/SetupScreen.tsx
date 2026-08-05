@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { MAX_DIM, TARGET_LED_COUNT, type Design } from './types.ts'
 import { validateDesign, type ProjectSummary } from './storage.ts'
 
@@ -21,7 +21,15 @@ function SetupScreen({ projects, onCreate, onOpen, onDelete, onImport }: Props) 
   const [cols, setCols] = useState(8)
   const [rows, setRows] = useState(10)
   const [importError, setImportError] = useState<string | null>(null)
+  const [atRisk, setAtRisk] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    void navigator.storage
+      ?.persisted?.()
+      .then((persisted) => setAtRisk(!persisted))
+      .catch(() => {})
+  }, [])
 
   const count = cols * rows
   const valid = cols >= 1 && rows >= 1 && cols <= MAX_DIM && rows <= MAX_DIM
@@ -113,6 +121,12 @@ function SetupScreen({ projects, onCreate, onOpen, onDelete, onImport }: Props) 
         />
       </div>
       {importError !== null && <p className="import-error">{importError}</p>}
+
+      {atRisk && projects.length > 0 && (
+        <p className="storage-note">
+          Saves live in this browser and could be evicted — use 🔗 Share links or ⇓ export to keep work safe.
+        </p>
+      )}
 
       {projects.length > 0 && (
         <section className="saved">

@@ -46,6 +46,10 @@ Two deliverables:
   glowing "LED" dots on black to approximate the real thing.
 - Autosave to localStorage; project manager (multiple named designs).
 - Export / import `.json` design files.
+- Loss-prevention: `navigator.storage.persist()` to resist browser eviction,
+  plus **share links** — the whole design deflate-compressed into the URL
+  fragment. A link is a device-independent save/backup and the way animators
+  send designs around; opening one imports it as a new local project.
 
 **Milestone 4 — Hardware export**
 - **Export as Arduino header (`animation.h`)** — palette + frame data as C
