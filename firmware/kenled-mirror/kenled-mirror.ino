@@ -22,10 +22,14 @@
 #define PIN_LCD_RST 1
 #define PIN_LCD_BL 0 // backlight is ACTIVE LOW: write 0 to turn on
 
-// If everything looks negative (white background), flip this.
-#define INVERT_COLORS true
-// This panel is BGR — red and blue arrive swapped. Flip if red shows as blue.
-#define SWAP_RB true
+// Panel quirk dials. The INITR_MINI160x80_PLUGIN init already handles this
+// panel's IPS inversion, so both stay off. Diagnosis by what red renders as:
+//   red    -> correct, leave alone
+//   cyan   -> set INVERT_COLORS true (background will also look white)
+//   blue   -> set SWAP_RB true
+//   yellow -> both flags are wrongly on; turn both off
+#define INVERT_COLORS false
+#define SWAP_RB false
 
 // Hardware SPI — SPI.begin() in setup() maps it onto the panel's pins.
 Adafruit_ST7735 tft(PIN_LCD_CS, PIN_LCD_DC, PIN_LCD_RST);
