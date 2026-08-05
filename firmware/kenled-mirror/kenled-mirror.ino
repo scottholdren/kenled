@@ -51,6 +51,9 @@ uint16_t cellSize, xOff, yOff;
 // garbage into it. Near-black (R=G=B=1) keeps a set bit in every 16-bit word
 // — max possible zero run 30 bits — so the pixel never hears the blit at all.
 #define NEARBLACK 0x0821
+// Off cells (palette index 0) draw as dim gray so the grid stays visible
+// against the near-black background — same idea as the web app's editor.
+#define OFFCELL 0x2124 // ~#212223
 
 uint16_t color565(uint32_t rgb) {
   uint8_t r = (rgb >> 16) & 0xFF, g = (rgb >> 8) & 0xFF, b = rgb & 0xFF;
@@ -80,7 +83,8 @@ void drawFrame(const uint8_t* frame) {
     uint16_t x = xOff + (i % ANIM_COLS) * cellSize;
     uint16_t y = yOff + (i / ANIM_COLS) * cellSize;
     // 1px gap between cells reads as the mortar line between bricks
-    canvas.fillRect(x, y, cellSize - 1, cellSize - 1, color565(ANIM_PALETTE[frame[i]]));
+    uint16_t c = frame[i] == 0 ? OFFCELL : color565(ANIM_PALETTE[frame[i]]);
+    canvas.fillRect(x, y, cellSize - 1, cellSize - 1, c);
   }
   tft.drawRGBBitmap(0, 0, canvas.getBuffer(), canvas.width(), canvas.height());
   apa102Steady(); // re-assert every frame over the blit garbage
