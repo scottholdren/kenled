@@ -29,6 +29,19 @@
 // cache that ignores query strings, so they can lag pushes by many minutes.
 #define REF_URL "https://api.github.com/repos/scottholdren/kenled/git/ref/heads/wall"
 #define RAW_BASE "https://raw.githubusercontent.com/scottholdren/kenled/"
+
+// ---- Update mode (compile-time) ----
+//   MODE_POLL       — keep polling every POLL_INTERVAL_MS (live-updating wall)
+//   MODE_BOOT_FETCH — fetch the latest once at boot, then Wi-Fi off and play
+//                     forever. Production mode: power-cycle to pull the latest.
+//   MODE_OFFLINE    — no Wi-Fi at all; play the cached/compiled-in animation.
+// Override without editing:  --build-property "compiler.cpp.extra_flags=-DUPDATE_MODE=1"
+#define MODE_POLL 0
+#define MODE_BOOT_FETCH 1
+#define MODE_OFFLINE 2
+#ifndef UPDATE_MODE
+#define UPDATE_MODE MODE_POLL
+#endif
 #define POLL_INTERVAL_MS 60000UL
 #define CACHE_PATH "/current.json"
 #define INCOMING_PATH "/incoming.json"
@@ -72,6 +85,7 @@ SemaphoreHandle_t pendingMux;
 
 volatile bool wifiUp = false;
 volatile uint32_t lastFetchOkAt = 0; // millis() of last 200/304
+volatile bool updateDone = false;    // MODE_BOOT_FETCH: one successful check completed
 
 uint16_t cellSize, xOff, yOff;
 
@@ -176,17 +190,28 @@ void drawFrame(uint16_t fi) {
     uint16_t c = frame[i] == 0 ? OFFCELL : color565(current->palette[frame[i]]);
     canvas.fillRect(x, y, cellSize - 1, cellSize - 1, c);
   }
-  // status dot, bottom-right: green = fresh, yellow = stale/no fetch yet, red = no wifi
-  uint16_t dot = !wifiUp                                        ? 0xF800
-                 : (millis() - lastFetchOkAt < 3 * POLL_INTERVAL_MS && lastFetchOkAt != 0) ? 0x07E0
-                                                                : 0xFFE0;
+#if UPDATE_MODE != MODE_OFFLINE
+  // status dot, bottom-right: green = fresh/updated, yellow = stale/no fetch
+  // yet, red = no wifi
+  uint16_t dot;
+  if (updateDone) {
+    dot = 0x07E0;
+  } else if (!wifiUp) {
+    dot = 0xF800;
+  } else if (millis() - lastFetchOkAt < 3 * POLL_INTERVAL_MS && lastFetchOkAt != 0) {
+    dot = 0x07E0;
+  } else {
+    dot = 0xFFE0;
+  }
   canvas.fillRect(canvas.width() - 5, canvas.height() - 5, 4, 4, dot);
+#endif
   tft.drawRGBBitmap(0, 0, canvas.getBuffer(), canvas.width(), canvas.height());
   apa102Steady();
 }
 
 // ---- Wi-Fi polling (background task) ----
 
+#if UPDATE_MODE != MODE_OFFLINE
 // Fetch current.json at a specific commit and stage it for the main loop.
 // Streams to flash and frees the TLS connection BEFORE parsing — parsing a
 // large animation while TLS buffers are alive can exhaust the heap.
@@ -275,9 +300,23 @@ void pollTask(void*) {
         http.end();
       }
     }
+#if UPDATE_MODE == MODE_BOOT_FETCH
+    if (lastFetchOkAt != 0) {
+      // Got a definitive answer once — done. Wi-Fi off, play forever.
+      updateDone = true;
+      WiFi.disconnect(true);
+      WiFi.mode(WIFI_OFF);
+      wifiUp = false;
+      Serial.println("[poll] boot fetch complete, wifi off");
+      vTaskDelete(nullptr);
+    }
+    vTaskDelay(pdMS_TO_TICKS(15000)); // retry sooner — waiting on a router, not a schedule
+#else
     vTaskDelay(pdMS_TO_TICKS(POLL_INTERVAL_MS));
+#endif
   }
 }
+#endif // UPDATE_MODE != MODE_OFFLINE
 
 // ---- Boot ----
 
@@ -324,8 +363,10 @@ void setup() {
   }
   applyAnim(boot);
 
+#if UPDATE_MODE != MODE_OFFLINE
   WiFi.mode(WIFI_STA);
   xTaskCreate(pollTask, "poll", 8192, nullptr, 1, nullptr);
+#endif
 }
 
 void loop() {

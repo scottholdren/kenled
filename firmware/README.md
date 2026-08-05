@@ -6,12 +6,25 @@ Flash-once player for the show: loops the animation compiled in from
 Two sketches, same `animation.h`:
 
 - **`kenled/`** — drives the real pixels (ESP32-S3-DevKitC-1).
-- **`kenled-mirror/`** — plays the animation as a grid on the LilyGo
-  T-Dongle-C5's 0.96" LCD. Pocket preview / show-night monitor. Board:
-  "ESP32C5 Dev Module" (needs esp32 core 3.3.0+); library: "Adafruit ST7735
-  and ST7789" from the Library Manager. Same workflow: export animation.h,
-  drop it next to the .ino, flash. If colors render inverted, flip
-  `INVERT_COLORS` at the top of the sketch.
+- **`kenled-mirror/`** — plays animations on the LilyGo T-Dongle-C5's 0.96"
+  LCD and (unless offline) pulls the published wall animation from GitHub.
+  Board: "ESP32C5 Dev Module" (esp32 core 3.3.0+, partition scheme
+  "8M with spiffs", USB CDC On Boot for serial logs); libraries: "Adafruit
+  ST7735 and ST7789", ArduinoJson. Wi-Fi credentials: copy
+  `wifi_secrets.h.example` to `wifi_secrets.h` (gitignored — repo is public).
+
+  **Update modes** (`UPDATE_MODE` at the top of the sketch, or
+  `--build-property "compiler.cpp.extra_flags=-DUPDATE_MODE=N"`):
+
+  | N | Mode | Behavior |
+  |---|---|---|
+  | 0 | `MODE_POLL` | Checks GitHub every 60 s, updates live (dev/design sessions) |
+  | 1 | `MODE_BOOT_FETCH` | Fetches the latest once at boot, then Wi-Fi off and plays forever. **Production: power-cycle the device to pull the latest.** |
+  | 2 | `MODE_OFFLINE` | No Wi-Fi compiled in at all; plays the cached / compiled-in animation |
+
+  Status dot (bottom-right of screen, modes 0–1): green = up to date,
+  yellow = connected but stale, red = no Wi-Fi. Playback never depends on the
+  network — boot order is LittleFS cache, then compiled-in `animation.h`.
 
 ## One-time Arduino IDE setup
 
