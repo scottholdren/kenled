@@ -118,6 +118,21 @@ button.primary {
   font-size: 0.9rem;
 }
 
+.gate-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.gate-row input {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  width: 14rem;
+}
+
 .setup-secondary {
   display: flex;
   gap: 0.5rem;

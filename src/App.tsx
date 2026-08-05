@@ -14,6 +14,8 @@ import {
 import { designFromHash } from './share.ts'
 import SetupScreen from './SetupScreen.tsx'
 import Editor from './Editor.tsx'
+import GateScreen from './GateScreen.tsx'
+import { isUnlocked } from './gate.ts'
 
 interface OpenProject {
   id: string
@@ -21,6 +23,7 @@ interface OpenProject {
 }
 
 function App() {
+  const [unlocked, setUnlocked] = useState(() => isUnlocked())
   const [project, setProject] = useState<OpenProject | null>(() => loadCurrent())
   const [projects, setProjects] = useState<ProjectSummary[]>(() => listProjects())
 
@@ -48,6 +51,10 @@ function App() {
     return () => window.removeEventListener('hashchange', importFromHash)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  if (!unlocked) {
+    return <GateScreen onUnlock={() => setUnlocked(true)} />
+  }
 
   if (project === null) {
     return (
