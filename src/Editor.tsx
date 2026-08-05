@@ -6,6 +6,7 @@ import FrameStrip from './FrameStrip.tsx'
 import Preview from './Preview.tsx'
 import { designToHeader } from './exportHeader.ts'
 import { designToShareUrl } from './share.ts'
+import { getToken, publishDesign, setToken, clearToken, TOKEN_HELP_URL } from './publish.ts'
 
 interface Props {
   design: Design
@@ -47,6 +48,10 @@ function Editor({ design, onChange, onNewProject }: Props) {
   const [confirmNew, setConfirmNew] = useState(false)
   const [preview, setPreview] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [pubState, setPubState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle')
+  const [pubError, setPubError] = useState('')
+  const [askToken, setAskToken] = useState(false)
+  const [tokenDraft, setTokenDraft] = useState('')
 
   const frame = design.frames[frameIndex]
 
@@ -171,6 +176,25 @@ function Editor({ design, onChange, onNewProject }: Props) {
 
   const exportHeader = () => download('animation.h', designToHeader(design), 'text/x-c')
 
+  const publish = async () => {
+    const token = getToken()
+    if (token === null) {
+      setAskToken(true)
+      return
+    }
+    setPubState('busy')
+    try {
+      await publishDesign(design, token)
+      setPubState('done')
+      setTimeout(() => setPubState('idle'), 2500)
+    } catch (e) {
+      if (e instanceof Error && e.message.includes('Token rejected')) clearToken()
+      setPubError(e instanceof Error ? e.message : 'Publish failed.')
+      setPubState('error')
+      setTimeout(() => setPubState('idle'), 6000)
+    }
+  }
+
   const share = async () => {
     const url = await designToShareUrl(design)
     try {
@@ -203,6 +227,13 @@ function Editor({ design, onChange, onNewProject }: Props) {
           {design.cols}×{design.rows} · {design.cols * design.rows} LEDs · frame {frameIndex + 1}/
           {design.frames.length}
         </span>
+        <button
+          onClick={() => void publish()}
+          disabled={pubState === 'busy'}
+          title="Publish this design to the wall (commits current.json)"
+        >
+          {pubState === 'busy' ? '⇪ Publishing…' : pubState === 'done' ? '✓ Published' : '⇪ Publish'}
+        </button>
         <button onClick={() => void share()} title="Copy a link that contains this whole design">
           {copied ? '✓ Copied' : '🔗 Share'}
         </button>
@@ -220,6 +251,37 @@ function Editor({ design, onChange, onNewProject }: Props) {
           <button onClick={() => setConfirmNew(true)}>Projects…</button>
         )}
       </header>
+
+      {pubState === 'error' && <div className="pub-banner error">{pubError}</div>}
+      {askToken && (
+        <div className="pub-banner">
+          <span>
+            Publishing needs a GitHub token with contents read/write on <code>kenled</code> —{' '}
+            <a href={TOKEN_HELP_URL} target="_blank" rel="noreferrer">
+              create one here
+            </a>
+            , then paste it:
+          </span>
+          <input
+            type="password"
+            placeholder="github_pat_…"
+            value={tokenDraft}
+            onChange={(e) => setTokenDraft(e.target.value)}
+          />
+          <button
+            disabled={tokenDraft.trim() === ''}
+            onClick={() => {
+              setToken(tokenDraft)
+              setTokenDraft('')
+              setAskToken(false)
+              void publish()
+            }}
+          >
+            Save & publish
+          </button>
+          <button onClick={() => setAskToken(false)}>Cancel</button>
+        </div>
+      )}
 
       <div className="toolbar">
         <div className="tool-group">

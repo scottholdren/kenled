@@ -225,6 +225,36 @@ button.primary {
   color: var(--muted);
 }
 
+.pub-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.pub-banner.error {
+  color: #ff6b60;
+}
+
+.pub-banner a {
+  color: var(--accent);
+}
+
+.pub-banner input {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.35rem 0.5rem;
+  flex: 1;
+  min-width: 12rem;
+}
+
 .toolbar {
   display: flex;
   justify-content: space-between;
