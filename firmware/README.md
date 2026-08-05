@@ -3,6 +3,16 @@
 Flash-once player for the show: loops the animation compiled in from
 `kenled/animation.h` forever. No Wi-Fi, no runtime updates.
 
+Two sketches, same `animation.h`:
+
+- **`kenled/`** — drives the real pixels (ESP32-S3-DevKitC-1).
+- **`kenled-mirror/`** — plays the animation as a grid on the LilyGo
+  T-Dongle-C5's 0.96" LCD. Pocket preview / show-night monitor. Board:
+  "ESP32C5 Dev Module" (needs esp32 core 3.3.0+); library: "Adafruit ST7735
+  and ST7789" from the Library Manager. Same workflow: export animation.h,
+  drop it next to the .ino, flash. If colors render inverted, flip
+  `INVERT_COLORS` at the top of the sketch.
+
 ## One-time Arduino IDE setup
 
 1. Install the **Arduino IDE** (2.x).
