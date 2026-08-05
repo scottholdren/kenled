@@ -1,19 +1,20 @@
-/** Default 16-color palette. Index 0 is always "off" (black) by convention. */
+/** Default 16-color palette: Minecraft wool colors. Index 0 is always "off" (black);
+ * black wool is dropped (redundant with off), leaving the other 15 wools. */
 export const DEFAULT_PALETTE: string[] = [
   '#000000', // off
-  '#ffffff',
-  '#ff3b30', // red
-  '#ff9500', // orange
-  '#ffcc00', // yellow
-  '#34c759', // green
-  '#00c7be', // teal
-  '#32ade6', // sky
-  '#007aff', // blue
-  '#5856d6', // indigo
-  '#af52de', // purple
-  '#ff2d95', // pink
-  '#8e2500', // rust
-  '#146b2e', // forest
-  '#8e8e93', // gray
-  '#3a3a3c', // charcoal
+  '#e9ecec', // white wool
+  '#8e8e86', // light gray wool
+  '#3e4447', // gray wool
+  '#a12722', // red wool
+  '#f07613', // orange wool
+  '#f8c627', // yellow wool
+  '#70b919', // lime wool
+  '#546d1b', // green wool
+  '#158991', // cyan wool
+  '#3aafd9', // light blue wool
+  '#35399d', // blue wool
+  '#792aac', // purple wool
+  '#bd44b3', // magenta wool
+  '#ed8dac', // pink wool
+  '#724728', // brown wool
 ]
