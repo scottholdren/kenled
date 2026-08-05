@@ -35,23 +35,24 @@
 Adafruit_ST7735 tft(PIN_LCD_CS, PIN_LCD_DC, PIN_LCD_RST);
 
 // Portrait 80x160: grid drawn top-of-screen down, like the wall.
+// Frames render into an off-screen canvas, then blit in one SPI burst —
+// no visible cell-by-cell painting at big transitions (like the loop wrap).
+GFXcanvas16 canvas(80, 160); // ~25.6 KB framebuffer
 uint16_t cellSize, xOff, yOff;
-uint8_t prev[ANIM_NUM_LEDS];
 
 uint16_t color565(uint32_t rgb) {
   uint8_t r = (rgb >> 16) & 0xFF, g = (rgb >> 8) & 0xFF, b = rgb & 0xFF;
-  return SWAP_RB ? tft.color565(b, g, r) : tft.color565(r, g, b);
+  return SWAP_RB ? canvas.color565(b, g, r) : canvas.color565(r, g, b);
 }
 
-void drawFrame(const uint8_t* frame, bool full) {
+void drawFrame(const uint8_t* frame) {
   for (uint16_t i = 0; i < ANIM_NUM_LEDS; i++) {
-    if (!full && frame[i] == prev[i]) continue;
     uint16_t x = xOff + (i % ANIM_COLS) * cellSize;
     uint16_t y = yOff + (i / ANIM_COLS) * cellSize;
     // 1px gap between cells reads as the mortar line between bricks
-    tft.fillRect(x, y, cellSize - 1, cellSize - 1, color565(ANIM_PALETTE[frame[i]]));
-    prev[i] = frame[i];
+    canvas.fillRect(x, y, cellSize - 1, cellSize - 1, color565(ANIM_PALETTE[frame[i]]));
   }
+  tft.drawRGBBitmap(0, 0, canvas.getBuffer(), canvas.width(), canvas.height());
 }
 
 void setup() {
@@ -66,18 +67,21 @@ void setup() {
   pinMode(PIN_LCD_BL, OUTPUT);
   digitalWrite(PIN_LCD_BL, LOW); // on
 
-  uint16_t w = tft.width();
-  uint16_t h = tft.height();
+  uint16_t w = canvas.width();
+  uint16_t h = canvas.height();
   cellSize = min(w / ANIM_COLS, h / ANIM_ROWS);
   xOff = (w - cellSize * ANIM_COLS) / 2;
   yOff = (h - cellSize * ANIM_ROWS) / 2;
-
-  drawFrame(ANIM_FRAMES[0], true);
+  canvas.fillScreen(ST77XX_BLACK);
 }
 
 void loop() {
-  for (uint16_t f = 0; f < ANIM_FRAME_COUNT; f++) {
-    drawFrame(ANIM_FRAMES[f], false);
-    delay(ANIM_FRAME_MS);
-  }
+  static uint16_t f = 0;
+  static uint32_t nextAt = 0;
+  uint32_t now = millis();
+  if (now < nextAt) return;
+  // drift-free cadence; resync if we ever fall a whole frame behind
+  nextAt = (now > nextAt + ANIM_FRAME_MS) ? now + ANIM_FRAME_MS : nextAt + ANIM_FRAME_MS;
+  drawFrame(ANIM_FRAMES[f]);
+  f = (f + 1) % ANIM_FRAME_COUNT;
 }
