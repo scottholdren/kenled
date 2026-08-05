@@ -1,15 +1,17 @@
+import { useState } from 'react'
+import { createDesign, type Design } from './types.ts'
+import { DEFAULT_PALETTE } from './palette.ts'
+import SetupScreen from './SetupScreen.tsx'
+import Editor from './Editor.tsx'
+
 function App() {
-  return (
-    <main className="hello">
-      <h1>KenLED</h1>
-      <p>LED matrix animation designer — deploy pipeline is live.</p>
-      <div className="dots" aria-hidden="true">
-        {Array.from({ length: 64 }, (_, i) => (
-          <span key={i} className="dot" style={{ animationDelay: `${(i % 8) * 0.1 + Math.floor(i / 8) * 0.05}s` }} />
-        ))}
-      </div>
-    </main>
-  )
+  const [design, setDesign] = useState<Design | null>(null)
+
+  if (design === null) {
+    return <SetupScreen onCreate={(cols, rows) => setDesign(createDesign(cols, rows, DEFAULT_PALETTE))} />
+  }
+
+  return <Editor design={design} onChange={setDesign} onNewProject={() => setDesign(null)} />
 }
 
 export default App
