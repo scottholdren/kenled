@@ -12,6 +12,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7735.h>
 #include <SPI.h>
+#include "APA102.h" // vendored Pololu library (MIT) — drives the onboard status pixel
 #include "animation.h"
 
 // T-Dongle-C5 fixed wiring (from LilyGo's pin_config.h)
@@ -50,19 +51,12 @@ uint16_t color565(uint32_t rgb) {
   return SWAP_RB ? tft.color565(b, g, r) : tft.color565(r, g, b);
 }
 
-void apa102Byte(uint8_t v) {
-  for (int8_t i = 7; i >= 0; i--) {
-    digitalWrite(PIN_LED_DI, (v >> i) & 1);
-    digitalWrite(PIN_LED_CI, HIGH);
-    digitalWrite(PIN_LED_CI, LOW);
-  }
-}
+APA102<PIN_LED_DI, PIN_LED_CI> statusLed;
 
 void apa102Off() {
-  apa102Byte(0); apa102Byte(0); apa102Byte(0); apa102Byte(0); // start frame
-  apa102Byte(0xE0); // brightness 0
-  apa102Byte(0); apa102Byte(0); apa102Byte(0); // B G R
-  apa102Byte(0xFF); apa102Byte(0xFF); apa102Byte(0xFF); apa102Byte(0xFF); // end
+  statusLed.startFrame();
+  statusLed.sendColor(0, 0, 0, 0);
+  statusLed.endFrame(1);
 }
 
 void drawFrame(const uint8_t* frame) {
@@ -73,6 +67,7 @@ void drawFrame(const uint8_t* frame) {
     canvas.fillRect(x, y, cellSize - 1, cellSize - 1, color565(ANIM_PALETTE[frame[i]]));
   }
   tft.drawRGBBitmap(0, 0, canvas.getBuffer(), canvas.width(), canvas.height());
+  apa102Off(); // re-assert every frame in case anything glitches the pixel
 }
 
 void setup() {
@@ -87,9 +82,6 @@ void setup() {
   pinMode(PIN_LCD_BL, OUTPUT);
   digitalWrite(PIN_LCD_BL, LOW); // on
 
-  pinMode(PIN_LED_CI, OUTPUT);
-  pinMode(PIN_LED_DI, OUTPUT);
-  digitalWrite(PIN_LED_CI, LOW);
   apa102Off();
 
   uint16_t w = canvas.width();
