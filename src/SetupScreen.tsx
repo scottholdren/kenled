@@ -3,9 +3,9 @@ import { MAX_DIM, TARGET_LED_COUNT, type Design } from './types.ts'
 import { validateDesign, type ProjectSummary } from './storage.ts'
 
 const PRESETS: Array<[number, number]> = [
-  [8, 8],
+  [10, 8],
   [8, 10],
-  [8, 12],
+  [8, 8],
   [10, 10],
 ]
 
@@ -18,8 +18,8 @@ interface Props {
 }
 
 function SetupScreen({ projects, onCreate, onOpen, onDelete, onImport }: Props) {
-  const [cols, setCols] = useState(8)
-  const [rows, setRows] = useState(10)
+  const [cols, setCols] = useState(10)
+  const [rows, setRows] = useState(8)
   const [importError, setImportError] = useState<string | null>(null)
   const [atRisk, setAtRisk] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
