@@ -12,7 +12,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7735.h>
 #include <SPI.h>
-#include "APA102.h" // vendored Pololu library (MIT) — drives the onboard status pixel
 #include "animation.h"
 
 // T-Dongle-C5 fixed wiring (from LilyGo's pin_config.h)
@@ -23,10 +22,11 @@
 #define PIN_LCD_RST 1
 #define PIN_LCD_BL 0 // backlight is ACTIVE LOW: write 0 to turn on
 
-// Onboard APA102 pixel — held off. It must still be driven once at boot:
-// left floating, its lines pick up SPI noise and it sparkles.
-#define PIN_LED_CI 4
-#define PIN_LED_DI 5
+// Onboard APA102 pixel: on this board revision it listens on the LCD's SPI
+// bus (SCK=6/MOSI=2, no chip-select of its own) — the factory pin_config's
+// GPIO 4/5 does nothing. Screen traffic latches it with garbage, so an "off"
+// frame is sent down the bus after every blit (the LCD's CS is idle then, so
+// the LCD ignores it). Verified empirically 2026-08-05.
 
 // Panel quirk dials. The INITR_MINI160x80_PLUGIN init already handles this
 // panel's IPS inversion, so both stay off. Diagnosis by what red renders as:
@@ -51,12 +51,13 @@ uint16_t color565(uint32_t rgb) {
   return SWAP_RB ? tft.color565(b, g, r) : tft.color565(r, g, b);
 }
 
-APA102<PIN_LED_DI, PIN_LED_CI> statusLed;
-
 void apa102Off() {
-  statusLed.startFrame();
-  statusLed.sendColor(0, 0, 0, 0);
-  statusLed.endFrame(1);
+  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
+  for (int i = 0; i < 4; i++) SPI.transfer(0x00); // start frame
+  SPI.transfer(0xE0); // brightness 0
+  SPI.transfer(0); SPI.transfer(0); SPI.transfer(0); // B G R
+  for (int i = 0; i < 4; i++) SPI.transfer(0xFF); // end frame
+  SPI.endTransaction();
 }
 
 void drawFrame(const uint8_t* frame) {
