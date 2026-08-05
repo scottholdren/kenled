@@ -52,11 +52,16 @@ uint16_t color565(uint32_t rgb) {
 }
 
 void apa102Off() {
+  // No 0xFF end frame! 0xFF bytes double as a full-white LED frame, and
+  // SK9822-style clones apply the last pending frame at the NEXT start frame
+  // — which made the "off" command itself flash white. Zeros are never a
+  // valid LED frame; the trailing zero run is both the end clocks and a
+  // second start frame that makes double-buffered clones apply the off now.
   SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
   for (int i = 0; i < 4; i++) SPI.transfer(0x00); // start frame
   SPI.transfer(0xE0); // brightness 0
   SPI.transfer(0); SPI.transfer(0); SPI.transfer(0); // B G R
-  for (int i = 0; i < 4; i++) SPI.transfer(0xFF); // end frame
+  for (int i = 0; i < 8; i++) SPI.transfer(0x00); // apply-trigger + end clocks
   SPI.endTransaction();
 }
 
