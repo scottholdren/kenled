@@ -46,9 +46,16 @@ Adafruit_ST7735 tft(PIN_LCD_CS, PIN_LCD_DC, PIN_LCD_RST);
 GFXcanvas16 canvas(80, 160); // ~25.6 KB framebuffer
 uint16_t cellSize, xOff, yOff;
 
+// The APA102 on the shared bus only wakes after 32 consecutive zero bits.
+// Pure black pixels (0x0000) create those runs, letting screen data latch
+// garbage into it. Near-black (R=G=B=1) keeps a set bit in every 16-bit word
+// — max possible zero run 30 bits — so the pixel never hears the blit at all.
+#define NEARBLACK 0x0821
+
 uint16_t color565(uint32_t rgb) {
   uint8_t r = (rgb >> 16) & 0xFF, g = (rgb >> 8) & 0xFF, b = rgb & 0xFF;
-  return SWAP_RB ? tft.color565(b, g, r) : tft.color565(r, g, b);
+  uint16_t c = SWAP_RB ? tft.color565(b, g, r) : tft.color565(r, g, b);
+  return c == 0 ? NEARBLACK : c;
 }
 
 // The pixel can't be kept dark (it hears every LCD byte and no code can stop
@@ -86,7 +93,7 @@ void setup() {
   tft.setSPISpeed(27000000);
   if (INVERT_COLORS) tft.invertDisplay(true);
   tft.setRotation(0); // portrait, 80 wide x 160 tall
-  tft.fillScreen(ST77XX_BLACK);
+  tft.fillScreen(NEARBLACK);
 
   pinMode(PIN_LCD_BL, OUTPUT);
   digitalWrite(PIN_LCD_BL, LOW); // on
@@ -98,7 +105,7 @@ void setup() {
   cellSize = min(w / ANIM_COLS, h / ANIM_ROWS);
   xOff = (w - cellSize * ANIM_COLS) / 2;
   yOff = (h - cellSize * ANIM_ROWS) / 2;
-  canvas.fillScreen(ST77XX_BLACK);
+  canvas.fillScreen(NEARBLACK);
 }
 
 void loop() {
