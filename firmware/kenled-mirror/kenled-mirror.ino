@@ -11,6 +11,7 @@
 
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7735.h>
+#include <SPI.h>
 #include "animation.h"
 
 // T-Dongle-C5 fixed wiring (from LilyGo's pin_config.h)
@@ -21,19 +22,21 @@
 #define PIN_LCD_RST 1
 #define PIN_LCD_BL 0 // backlight is ACTIVE LOW: write 0 to turn on
 
-// If colors look wrong (white shows as blue-ish, everything negative),
-// flip this — some 0.96" IPS panels need inversion.
+// If everything looks negative (white background), flip this.
 #define INVERT_COLORS true
+// This panel is BGR — red and blue arrive swapped. Flip if red shows as blue.
+#define SWAP_RB true
 
-// Software-SPI constructor: works regardless of the C5's default SPI pins.
-Adafruit_ST7735 tft(PIN_LCD_CS, PIN_LCD_DC, PIN_LCD_MOSI, PIN_LCD_SCK, PIN_LCD_RST);
+// Hardware SPI — SPI.begin() in setup() maps it onto the panel's pins.
+Adafruit_ST7735 tft(PIN_LCD_CS, PIN_LCD_DC, PIN_LCD_RST);
 
 // Portrait 80x160: grid drawn top-of-screen down, like the wall.
 uint16_t cellSize, xOff, yOff;
 uint8_t prev[ANIM_NUM_LEDS];
 
 uint16_t color565(uint32_t rgb) {
-  return tft.color565((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+  uint8_t r = (rgb >> 16) & 0xFF, g = (rgb >> 8) & 0xFF, b = rgb & 0xFF;
+  return SWAP_RB ? tft.color565(b, g, r) : tft.color565(r, g, b);
 }
 
 void drawFrame(const uint8_t* frame, bool full) {
@@ -48,7 +51,10 @@ void drawFrame(const uint8_t* frame, bool full) {
 }
 
 void setup() {
+  // C5 defaults SPI to other pins — bind it to the panel's wiring explicitly.
+  SPI.begin(PIN_LCD_SCK, -1, PIN_LCD_MOSI, PIN_LCD_CS);
   tft.initR(INITR_MINI160x80_PLUGIN);
+  tft.setSPISpeed(27000000);
   if (INVERT_COLORS) tft.invertDisplay(true);
   tft.setRotation(0); // portrait, 80 wide x 160 tall
   tft.fillScreen(ST77XX_BLACK);
