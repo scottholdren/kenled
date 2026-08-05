@@ -42,7 +42,7 @@ uint16_t cellSize, xOff, yOff;
 
 uint16_t color565(uint32_t rgb) {
   uint8_t r = (rgb >> 16) & 0xFF, g = (rgb >> 8) & 0xFF, b = rgb & 0xFF;
-  return SWAP_RB ? canvas.color565(b, g, r) : canvas.color565(r, g, b);
+  return SWAP_RB ? tft.color565(b, g, r) : tft.color565(r, g, b);
 }
 
 void drawFrame(const uint8_t* frame) {
