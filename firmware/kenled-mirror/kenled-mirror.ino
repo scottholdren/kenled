@@ -42,7 +42,9 @@
 #ifndef UPDATE_MODE
 #define UPDATE_MODE MODE_POLL
 #endif
+#ifndef POLL_INTERVAL_MS
 #define POLL_INTERVAL_MS 60000UL
+#endif
 #define CACHE_PATH "/current.json"
 #define INCOMING_PATH "/incoming.json"
 

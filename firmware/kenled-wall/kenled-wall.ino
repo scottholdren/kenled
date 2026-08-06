@@ -44,7 +44,9 @@
 
 #define REF_URL "https://api.github.com/repos/scottholdren/kenled/git/ref/heads/wall"
 #define RAW_BASE "https://raw.githubusercontent.com/scottholdren/kenled/"
+#ifndef POLL_INTERVAL_MS
 #define POLL_INTERVAL_MS 60000UL
+#endif
 #define CACHE_PATH "/current.json"
 #define INCOMING_PATH "/incoming.json"
 
