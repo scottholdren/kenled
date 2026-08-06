@@ -35,7 +35,9 @@
 #define COLOR_ORDER RGB
 #endif
 
-#define NUM_LEDS 100    // physical chain length (89 bricks + spares)
+#ifndef NUM_LEDS
+#define NUM_LEDS 100 // physical chain length (89 bricks + spares)
+#endif
 #define SERPENTINE true // rows zigzag; flip if wired parallel
 #define BRIGHTNESS 96
 #define MAX_MILLIAMPS 8000 // FastLED's estimate assumes 5V; still a sane cap
