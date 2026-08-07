@@ -39,6 +39,9 @@
 #define NUM_LEDS 100 // physical chain length (89 bricks + spares)
 #endif
 #define SERPENTINE true // rows zigzag; flip if wired parallel
+#ifndef FLIP_Y
+#define FLIP_Y 0 // 1 if the chain's first row is the BOTTOM of the grid
+#endif
 #define BRIGHTNESS 96
 #define MAX_MILLIAMPS 8000 // FastLED's estimate assumes 5V; still a sane cap
 
@@ -81,7 +84,8 @@ void freeAnim(Anim* a) {
 }
 
 // Designer grid is row-major, origin top-left. Maps grid position -> chain index.
-uint16_t ledIndex(uint8_t x, uint8_t y, uint16_t cols) {
+uint16_t ledIndex(uint8_t x, uint8_t y, uint16_t cols, uint16_t rows) {
+  if (FLIP_Y) y = rows - 1 - y;
   if (SERPENTINE && (y & 1)) return (uint16_t)y * cols + (cols - 1 - x);
   return (uint16_t)y * cols + x;
 }
@@ -285,7 +289,7 @@ void showFrame(uint16_t fi) {
   FastLED.clear();
   for (uint8_t y = 0; y < current->rows; y++) {
     for (uint8_t x = 0; x < current->cols; x++) {
-      uint16_t idx = ledIndex(x, y, current->cols);
+      uint16_t idx = ledIndex(x, y, current->cols, current->rows);
       if (idx < NUM_LEDS) leds[idx] = CRGB(current->palette[frame[y * current->cols + x]]);
     }
   }
