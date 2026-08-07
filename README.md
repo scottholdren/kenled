@@ -8,10 +8,10 @@ Design an animation on the web, hit **Publish**, and within seconds every
 device subscribed to the wall — the installation itself and a pocket-sized
 monitor — is playing it.
 
-![The test rig playing the rainbow-star animation](docs/test-rig.jpg)
+![The test rig playing the self-playing snake](docs/wall-demo.gif)
 
 *The 10×10 test rig: 100 WS2811 bullet pixels in foam board, driven by the
-production firmware, playing a generated "radiating rainbow star" published
+production firmware, playing a generated self-playing snake game published
 over Wi-Fi seconds earlier. The glass-brick wall replaces the foam board;
 everything else ships as-is.*
 
