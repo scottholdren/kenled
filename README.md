@@ -4,9 +4,16 @@ An art installation: a wall of **89 glass bricks**, each lit by an addressable
 RGB LED, playing pixel animations designed in a browser and delivered to the
 wall over the air.
 
-Design an animation on the web, hit **Publish**, and within a minute every
+Design an animation on the web, hit **Publish**, and within seconds every
 device subscribed to the wall — the installation itself and a pocket-sized
 monitor — is playing it.
+
+![The test rig playing the rainbow-star animation](docs/test-rig.jpg)
+
+*The 10×10 test rig: 100 WS2811 bullet pixels in foam board, driven by the
+production firmware, playing a generated "radiating rainbow star" published
+over Wi-Fi seconds earlier. The glass-brick wall replaces the foam board;
+everything else ships as-is.*
 
 ![The KenLED designer](docs/editor.png)
 
@@ -69,9 +76,30 @@ and wiring.
 ## Hardware
 
 - 89× WS2811 12 V bullet pixels (one per glass brick, ~20 cm spacing)
-- ESP32-S3-DevKitC-1 controller, 74AHCT125 level shifter
+- ESP32-S3-DevKitC-1 controller
 - 12 V 10 A PSU (pixels) + 12 V→5 V buck (controller) — one wall plug
 - Full BOM, wiring notes, and build order in [PLAN.md](PLAN.md)
+
+### Test rig status (verified)
+
+The complete production stack runs on a bench rig today: two 50-pixel WS2811
+strings (10 cm spacing) mounted through foam board as a 10×10 grid, bench
+supply at 12 V, data driven directly from the S3's GPIO 4 at 3.3 V logic —
+no level shifter needed so far. Verified end to end on this rig:
+
+- Color order (RGB channel probe), pixel-walk sweep of all 100 positions,
+  serpentine + `FLIP_Y` mapping for a chain wired bottom-row-first
+- Publish → pixels latency under 10 s (bench builds poll every 10 s; GitHub's
+  conditional-request rules make this effectively free)
+- Generated animations: a self-playing pong, a waving flag, a beating heart,
+  a radiating rainbow star, a self-playing snake — animations are plain JSON,
+  so anything scriptable is publishable
+- Offline-first behavior under real failures: oversized payloads and network
+  loss leave the wall playing the last good animation
+
+Remaining for the installation: mount the pixels behind the glass bricks
+(drill vs. back-mount pending a glow test), switch the firmware to boot-fetch
+mode, and enable PSRAM in the build to lift the animation size ceiling.
 
 ## Development
 
