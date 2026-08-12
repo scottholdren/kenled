@@ -48,9 +48,10 @@ translate([margin, margin + s3_wid, base_t]) difference() {
 // end stop so the board can't slide out once the box lid is on
 translate([margin + s3_len - 0.01, margin - 4, base_t]) cube([2, s3_wid + 8, 4]);
 
-// ---- bay 2: DROK cradle — end walls + the zip-tie slots hold it down ----
+// ---- bay 2: DROK cradle ----
+// Side walls only — BOTH ENDS FULLY OPEN so the screw terminals and USB port
+// stay accessible. Sides stop lateral motion; the zip ties (slots in the base)
+// stop lift and lengthwise creep.
 drok_y = margin + s3_wid + gap;
-for (x = [margin - 2, margin + drok_len])
-  translate([x, drok_y, base_t]) cube([2, drok_wid, drok_wall]);
 for (y = [drok_y - 2, drok_y + drok_wid])
-  translate([margin, y, base_t]) cube([drok_len, 2, 3]); // low side curbs
+  translate([margin, y, base_t]) cube([drok_len, 2, drok_wall]); // full-height side walls
