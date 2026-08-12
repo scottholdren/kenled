@@ -1,8 +1,6 @@
 // KenLED controller mounting tray — ESP32-S3-DevKitC-1 + DROK USB buck.
 // Prints flat, no supports. Screws or VHB-tapes into the junction box.
-//
-// MEASURE YOUR BOARDS and adjust the parameters below before printing —
-// clone boards vary a millimeter or two. Rail fit should be snug, not forced.
+// v3: both bays centered; corner screw holes have clear webbing all around.
 
 // ---- parameters (mm) ----
 s3_len = 62;      // DevKitC-1 board length (measured)
@@ -12,46 +10,49 @@ rail_lip = 0.4;   // lip overhang — tiny, clears the header pins
 
 drok_len = 63;    // DROK buck length (measured)
 drok_wid = 27;    // DROK width (measured)
-drok_wall = 8;    // cradle end-wall height
+drok_wall = 8;    // cradle side-wall height
 
 base_t = 3;       // baseplate thickness
 gap = 12;         // spacing between the two bays
-margin = 6;
+edge = 14;        // clear border around the bays (screw holes live here)
+hole_inset = 7;   // screw hole distance from tray corners
 
-tray_len = max(s3_len, drok_len) + 2 * margin;
-tray_wid = s3_wid + drok_wid + gap + 2 * margin + 12;
+// ---- derived layout (everything centered) ----
+tray_len = max(s3_len, drok_len) + 2 * edge;
+content_h = (s3_wid + 8) + gap + (drok_wid + 4); // s3 bay + gap + drok bay
+tray_wid = content_h + 2 * edge;
 
-// ---- baseplate with corner screw holes + zip-tie slots ----
+s3_x = (tray_len - s3_len) / 2;
+s3_y = edge + 4;                       // s3 board's lower edge
+drok_x = (tray_len - drok_len) / 2;
+drok_y = edge + 8 + s3_wid + gap + 2;  // drok module's lower edge
+
+// ---- baseplate with corner screw holes + drok zip-tie slots ----
 difference() {
   cube([tray_len, tray_wid, base_t]);
-  for (x = [5, tray_len - 5], y = [5, tray_wid - 5])
-    translate([x, y, -1]) cylinder(h = base_t + 2, d = 3.5, $fn = 24); // M3 screws
-  // zip-tie slots flanking each bay for cable dressing / backup retention
-  for (y = [margin + s3_wid + 2, margin + s3_wid + gap + drok_wid + 2])
-    for (x = [tray_len * 0.3, tray_len * 0.7])
+  for (x = [hole_inset, tray_len - hole_inset], y = [hole_inset, tray_wid - hole_inset])
+    translate([x, y, -1]) cylinder(h = base_t + 2, d = 3.5, $fn = 24); // M3
+  // zip-tie slot pairs flanking the DROK bay
+  for (x = [drok_x + drok_len * 0.25, drok_x + drok_len * 0.75 - 8])
+    for (y = [drok_y - 6, drok_y + drok_wid + 3])
       translate([x, y, -1]) cube([8, 3, base_t + 2]);
 }
 
-// ---- bay 1: S3 edge rails (board slides in from the end, USB ends open) ----
-// Each rail is an L-profile: groove at PCB height, lip overhanging the board edge.
-// outer rail — lip faces +y (toward the board)
-translate([margin, margin - 4, base_t]) difference() {
+// ---- bay 1: S3 edge rails (ends open — USB reachable; slide in from an end) ----
+// outer rail, lip faces +y (toward the board)
+translate([s3_x, s3_y - 4, base_t]) difference() {
   cube([s3_len, 4, pcb_t + 2.4]);
   translate([-1, 4 - rail_lip, 1.2]) cube([s3_len + 2, rail_lip + 1, pcb_t]);
 }
-// inner rail — lip faces -y (toward the board)
-translate([margin, margin + s3_wid, base_t]) difference() {
+// inner rail, lip faces -y
+translate([s3_x, s3_y + s3_wid, base_t]) difference() {
   cube([s3_len, 4, pcb_t + 2.4]);
   translate([-1, -1, 1.2]) cube([s3_len + 2, rail_lip + 1, pcb_t]);
 }
+// end stop (one end only, so the board can still slide in; the box wall
+// or lid backs up the open end)
+translate([s3_x + s3_len, s3_y - 4, base_t]) cube([2, s3_wid + 8, 4]);
 
-// end stop so the board can't slide out once the box lid is on
-translate([margin + s3_len - 0.01, margin - 4, base_t]) cube([2, s3_wid + 8, 4]);
-
-// ---- bay 2: DROK cradle ----
-// Side walls only — BOTH ENDS FULLY OPEN so the screw terminals and USB port
-// stay accessible. Sides stop lateral motion; the zip ties (slots in the base)
-// stop lift and lengthwise creep.
-drok_y = margin + s3_wid + gap;
+// ---- bay 2: DROK cradle — side walls only, BOTH ENDS OPEN for terminals/USB ----
 for (y = [drok_y - 2, drok_y + drok_wid])
-  translate([margin, y, base_t]) cube([drok_len, 2, drok_wall]); // full-height side walls
+  translate([drok_x, y, base_t]) cube([drok_len, 2, drok_wall]);
