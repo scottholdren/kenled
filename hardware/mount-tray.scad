@@ -14,7 +14,7 @@ drok_wall = 8;    // cradle side-wall height
 
 base_t = 3;       // baseplate thickness
 gap = 12;         // spacing between the two bays
-edge = 14;        // clear border around the bays (screw holes live here)
+edge = 18;        // clear border around the bays (screw holes live here)
 hole_inset = 7;   // screw hole distance from tray corners
 
 // ---- derived layout (everything centered) ----
