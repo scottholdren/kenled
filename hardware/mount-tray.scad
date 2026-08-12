@@ -5,13 +5,13 @@
 // clone boards vary a millimeter or two. Rail fit should be snug, not forced.
 
 // ---- parameters (mm) ----
-s3_len = 70;      // DevKitC-1 board length (measure yours)
-s3_wid = 26;      // board width
+s3_len = 62;      // DevKitC-1 board length (measured)
+s3_wid = 28;      // board width (measured)
 pcb_t = 1.8;      // rail groove height (1.6mm PCB + slip)
-rail_lip = 2;     // how far the rail lips overhang the board edge
+rail_lip = 0.4;   // lip overhang — tiny, clears the header pins
 
-drok_len = 64;    // DROK buck length (measure)
-drok_wid = 27;    // DROK width
+drok_len = 63;    // DROK buck length (measured)
+drok_wid = 27;    // DROK width (measured)
 drok_wall = 8;    // cradle end-wall height
 
 base_t = 3;       // baseplate thickness
