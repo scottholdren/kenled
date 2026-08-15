@@ -1,5 +1,30 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Design } from './types.ts'
+
+// Free-typing duration field: clamping on every keystroke makes multi-digit
+// entry impossible (typing "500" clamps "5" to 30), so clamp on commit only.
+function DurationInput({ value, onCommit }: { value: number; onCommit: (ms: number) => void }) {
+  const [draft, setDraft] = useState(String(value))
+  useEffect(() => setDraft(String(value)), [value])
+  const commit = () => {
+    const v = Math.round(Number(draft))
+    onCommit(Number.isFinite(v) && draft.trim() !== '' ? Math.max(30, Math.min(2000, v)) : value)
+  }
+  return (
+    <input
+      type="number"
+      min={30}
+      max={2000}
+      step={5}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+      }}
+    />
+  )
+}
 
 interface ThumbProps {
   frame: number[]
@@ -91,17 +116,7 @@ function FrameStrip({
           👻 Onion
         </button>
         <label className="duration">
-          <input
-            type="number"
-            min={30}
-            max={2000}
-            step={5}
-            value={frameDurationMs}
-            onChange={(e) => {
-              const v = Math.max(30, Math.min(2000, Math.floor(e.target.valueAsNumber) || 125))
-              onDuration(v)
-            }}
-          />
+          <DurationInput value={frameDurationMs} onCommit={onDuration} />
           ms/frame · {fps >= 10 ? Math.round(fps) : fps.toFixed(1)} fps
         </label>
       </div>

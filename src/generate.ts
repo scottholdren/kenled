@@ -60,7 +60,7 @@ Hard requirements:
 - Grid is exactly ${cols} columns x ${rows} rows. cols=${cols}, rows=${rows}.
 - Each frame is exactly ${cols * rows} integers (palette indices 0-15), row-major, top-left origin.
 - palette: exactly 16 entries, "#rrggbb" lowercase hex. Index 0 MUST be "#000000" and means "LED off". Choose the other 15 to suit the animation.
-- 2 to 48 frames, but default to 24 or fewer — use more only when the motion truly needs them or the user asks. frameDurationMs between 30 and 2000 (per-frame timing; pick what suits the motion).
+- 2 to 48 frames, but default to 12-20 — every extra frame slows generation, and short seamless loops usually read better on a wall. Use more only when the motion truly needs them or the user asks. frameDurationMs between 30 and 2000 (per-frame timing; pick what suits the motion).
 
 Design guidance:
 - This is physical light art viewed across a room: favor bold shapes, high contrast, and saturated colors — subtle gradients get lost in the diffusion.

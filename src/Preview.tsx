@@ -19,6 +19,7 @@ function Preview({ design, onClose }: Props) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement) return // don't steal keys from inputs
       if (e.key === 'Escape') onClose()
       if (e.key === ' ') {
         e.preventDefault()
