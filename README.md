@@ -61,17 +61,14 @@ Designer's browser                 GitHub                       The wall
 
 ## Firmware (`firmware/`)
 
-| Sketch | Board | Role |
-|---|---|---|
-| `kenled-wall` | ESP32-S3-DevKitC-1 | Production controller: drives the WS2811 chain via FastLED + OTA animation updates |
-| `kenled-mirror` | LilyGo T-Dongle-C5 | Pocket mirror: plays the published wall animation on its 0.96" LCD |
-| `kenled` | any ESP32 | Minimal offline player for a compiled-in `animation.h` |
-
-Compile-time update modes (both connected sketches): **poll** (live updates
-every 60 s), **boot-fetch** (pull once at power-on, then radio off — the
-production mode: power-cycle the wall to update it), and **offline** (no Wi-Fi
-compiled in at all). See `firmware/README.md` for build flags, board settings,
-and wiring.
+One sketch: `kenled-wall` (ESP32-S3-DevKitC-1) — drives the WS2811 chain via
+FastLED and pulls published animations over Wi-Fi. Compile-time update modes:
+**poll** (live updates, dev), **boot-fetch** (pull once at power-on, then
+radio off — the production mode: power-cycle the wall to update it), and
+**offline** (no Wi-Fi compiled in at all). Offline-first in every mode: boots
+from its flash cache, falls back to a compiled-in animation, and keeps
+playing through any network failure. See `firmware/README.md` for build
+flags, board settings, and wiring.
 
 ## Hardware
 

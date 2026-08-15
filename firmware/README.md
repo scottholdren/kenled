@@ -1,66 +1,51 @@
 # KenLED Firmware
 
-Flash-once player for the show: loops the animation compiled in from
-`kenled/animation.h` forever. No Wi-Fi, no runtime updates.
+One firmware: **`kenled-wall/`** — the ESP32-S3-DevKitC-1 controller that
+drives the WS2811 bullet-pixel chain and pulls the published wall animation
+from GitHub. Playback never depends on the network: boot order is LittleFS
+cache, then the compiled-in `animation.h` fallback.
 
-Two sketches, same `animation.h`:
+(A LilyGo T-Dongle-C5 "pocket mirror" firmware previously lived here; it was
+removed when the project settled on the S3. It's recoverable from git history
+if ever wanted — along with its hard-won ST7735/APA102 quirk handling.)
 
-- **`kenled/`** — drives the real pixels (ESP32-S3-DevKitC-1).
-- **`kenled-mirror/`** — plays animations on the LilyGo T-Dongle-C5's 0.96"
-  LCD and (unless offline) pulls the published wall animation from GitHub.
-  Board: "ESP32C5 Dev Module" (esp32 core 3.3.0+, partition scheme
-  "8M with spiffs", USB CDC On Boot for serial logs); libraries: "Adafruit
-  ST7735 and ST7789", ArduinoJson. Wi-Fi credentials: copy
-  `wifi_secrets.h.example` to `wifi_secrets.h` (gitignored — repo is public).
+## Build
 
-  **Update modes** (`UPDATE_MODE` at the top of the sketch, or
-  `--build-property "compiler.cpp.extra_flags=-DUPDATE_MODE=N"`):
+- Board: **ESP32S3 Dev Module**, FQBN options
+  `CDCOnBoot=cdc,FlashSize=16M,PartitionScheme=huge_app,PSRAM=opi`
+  (**PSRAM=opi is required** — without it, large animations fail to parse).
+- Libraries: **FastLED**, **ArduinoJson**.
+- Wi-Fi credentials: copy `kenled-wall/wifi_secrets.h.example` to
+  `wifi_secrets.h` (gitignored — the repo is public). Optionally add a
+  zero-permission GitHub PAT as `GH_TOKEN` to raise the poll rate limit from
+  60/hr (shared per IP) to 5000/hr.
 
-  | N | Mode | Behavior |
-  |---|---|---|
-  | 0 | `MODE_POLL` | Checks GitHub every 60 s, updates live (dev/design sessions) |
-  | 1 | `MODE_BOOT_FETCH` | Fetches the latest once at boot, then Wi-Fi off and plays forever. **Production: power-cycle the device to pull the latest.** |
-  | 2 | `MODE_OFFLINE` | No Wi-Fi compiled in at all; plays the cached / compiled-in animation |
+```sh
+arduino-cli compile --fqbn "esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=16M,PartitionScheme=huge_app,PSRAM=opi" \
+  --build-property "compiler.cpp.extra_flags=-DBENCH_ONBOARD=0 -DUPDATE_MODE=0 -DPOLL_INTERVAL_MS=10000UL -DFLIP_Y=1" \
+  firmware/kenled-wall
+```
 
-  Status dot (bottom-right of screen, modes 0–1): green = up to date,
-  yellow = connected but stale, red = no Wi-Fi. Playback never depends on the
-  network — boot order is LittleFS cache, then compiled-in `animation.h`.
+## Compile-time configuration
 
-## One-time Arduino IDE setup
+| Flag | Values | Meaning |
+|---|---|---|
+| `BENCH_ONBOARD` | `1` (default) / `0` | 1 = drive the DevKitC-1's onboard pixel (GPIO 48) for bench tests; 0 = the real WS2811/RGB chain on GPIO 4 |
+| `UPDATE_MODE` | `0` poll / `1` boot-fetch / `2` offline | 0 = check GitHub every `POLL_INTERVAL_MS` (dev). **1 = production: fetch once at boot, then Wi-Fi off — power-cycle the wall to update it.** 2 = no Wi-Fi compiled in at all |
+| `POLL_INTERVAL_MS` | ms | Poll cadence in mode 0 (default 60000; bench uses 10000) |
+| `NUM_LEDS` | int | Physical chain length (default 100) |
+| `FLIP_Y` | `0` / `1` | 1 if the chain's first row is the BOTTOM of the grid |
+| `SERPENTINE` | in-file | Rows zigzag (default true) |
+| `BRIGHTNESS`, `MAX_MILLIAMPS` | in-file | Global brightness cap and FastLED power limiter |
 
-1. Install the **Arduino IDE** (2.x).
-2. **Boards**: File → Preferences → Additional boards manager URLs, add
-   `https://espressif.github.io/arduino-esp32/package_esp32_index.json`,
-   then Boards Manager → install **esp32** (Espressif Systems).
-3. **Library**: Library Manager → install **FastLED**.
+## Wiring
 
-## Flashing
+- Pixel 12 V and GND come **directly from the 12 V PSU**, never from the board.
+- Board powers from USB or a 12V→5V buck; all grounds common.
+- Data: GPIO 4 → (74AHCT125 level shifter if needed) → 330 Ω → first pixel DIN.
+- Chain starts top-left... or bottom-left with `FLIP_Y=1`; rows serpentine.
 
-1. In the designer app (https://scottholdren.github.io/kenled/), open your
-   animation and click **⇓ animation.h**.
-2. Replace `kenled/animation.h` with the downloaded file.
-3. Open `kenled/kenled.ino` in the Arduino IDE.
-4. Board: **ESP32S3 Dev Module**. Port: the board's USB port (use the
-   connector labeled **UART**; if you use the USB-OTG port, enable
-   Tools → USB CDC On Boot).
-5. Upload. The animation starts immediately and loops forever.
+## Changing the animation
 
-## Wiring config (top of kenled.ino)
-
-| Define | Meaning |
-|---|---|
-| `DATA_PIN` | GPIO for the WS2812B data line (default 4). Set to **48** to bench-test on the DevKitC-1's onboard pixel — it shows the animation's top-left LED. |
-| `SERPENTINE` | `true` if rows zigzag (usual strip-built matrix), `false` if all rows run the same direction. |
-| `BRIGHTNESS` | Global cap 0–255. Start low (96); diffused walls rarely need more. |
-| `MAX_MILLIAMPS` | FastLED power limiter. Keep below the PSU rating (8000 for a 10 A supply). |
-
-## Wiring the matrix
-
-- LED 5 V and GND come **directly from the 5 V PSU**, never from the board's USB.
-- Board GND must connect to PSU/strip GND (shared ground).
-- Data: `DATA_PIN` → 74AHCT125 level shifter → 300–500 Ω resistor → first LED's DIN.
-- 1000 µF capacitor across 5 V/GND at the strip's power input.
-- Inject power at both ends of the chain to avoid color droop at the far end.
-- The chain starts at the grid's **top-left**, first row running left-to-right
-  (that's what the coordinate mapping assumes; flip `SERPENTINE` to match how
-  the rows actually zigzag).
+Publish from the designer app (⇪ Publish). In poll mode the wall updates
+within the poll interval; in boot-fetch mode, power-cycle the wall.
