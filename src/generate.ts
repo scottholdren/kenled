@@ -60,7 +60,7 @@ Hard requirements:
 - Grid is exactly ${cols} columns x ${rows} rows. cols=${cols}, rows=${rows}.
 - Each frame is exactly ${cols * rows} integers (palette indices 0-15), row-major, top-left origin.
 - palette: exactly 16 entries, "#rrggbb" lowercase hex. Index 0 MUST be "#000000" and means "LED off". Choose the other 15 to suit the animation.
-- 2 to 48 frames. frameDurationMs between 30 and 2000 (this is per-frame timing; pick what suits the motion).
+- 2 to 48 frames, but default to 24 or fewer — use more only when the motion truly needs them or the user asks. frameDurationMs between 30 and 2000 (per-frame timing; pick what suits the motion).
 
 Design guidance:
 - This is physical light art viewed across a room: favor bold shapes, high contrast, and saturated colors — subtle gradients get lost in the diffusion.
@@ -84,6 +84,7 @@ export async function generateAnimation(
   cols: number,
   rows: number,
   history: GenTurn[],
+  onProgress?: (bytesReceived: number) => void,
 ): Promise<{ design: Design; raw: string }> {
   const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
 
@@ -92,7 +93,14 @@ export async function generateAnimation(
     max_tokens: 32000,
     system: systemPrompt(cols, rows),
     messages: trimHistory(history),
-    output_config: { format: { type: 'json_schema', schema: SCHEMA } },
+    // medium effort: big latency win, and animation JSON doesn't need max depth
+    output_config: { effort: 'medium', format: { type: 'json_schema', schema: SCHEMA } },
+  })
+
+  let bytes = 0
+  stream.on('text', (delta) => {
+    bytes += delta.length
+    onProgress?.(bytes)
   })
 
   const msg = await stream.finalMessage()

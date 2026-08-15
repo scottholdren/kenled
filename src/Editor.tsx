@@ -60,6 +60,7 @@ function Editor({ design, onChange, onNewProject }: Props) {
   const [genOpen, setGenOpen] = useState(false)
   const [genPrompt, setGenPrompt] = useState('')
   const [genBusy, setGenBusy] = useState(false)
+  const [genStatus, setGenStatus] = useState('')
   const [genError, setGenError] = useState('')
   const [genHistory, setGenHistory] = useState<GenTurn[]>([])
   const [genKeyDraft, setGenKeyDraft] = useState('')
@@ -204,6 +205,16 @@ function Editor({ design, onChange, onNewProject }: Props) {
     if (prompt === '' || genBusy) return
     setGenBusy(true)
     setGenError('')
+    // Live progress: Opus thinks first (elapsed timer), then the animation
+    // JSON streams in (byte counter) — generation can take a few minutes.
+    const startedAt = Date.now()
+    let bytes = 0
+    const describe = () => {
+      const s = Math.round((Date.now() - startedAt) / 1000)
+      setGenStatus(bytes === 0 ? `✨ Thinking… ${s}s` : `✨ Building… ${(bytes / 1024).toFixed(1)}KB · ${s}s`)
+    }
+    describe()
+    const ticker = setInterval(describe, 1000)
     const history: GenTurn[] = [...genHistory, { role: 'user', content: prompt }]
     try {
       const { design: generated, raw } = await generateAnimation(
@@ -211,6 +222,9 @@ function Editor({ design, onChange, onNewProject }: Props) {
         design.cols,
         design.rows,
         history,
+        (b) => {
+          bytes = b
+        },
       )
       setGenHistory([...history, { role: 'assistant', content: raw }])
       setGenPrompt('')
@@ -229,6 +243,8 @@ function Editor({ design, onChange, onNewProject }: Props) {
         setGenError(msg)
       }
     } finally {
+      clearInterval(ticker)
+      setGenStatus('')
       setGenBusy(false)
     }
   }
@@ -332,6 +348,13 @@ function Editor({ design, onChange, onNewProject }: Props) {
                 placeholder="sk-ant-…"
                 value={genKeyDraft}
                 onChange={(e) => setGenKeyDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && genKeyDraft.trim() !== '') {
+                    setApiKey(genKeyDraft)
+                    setGenKeyDraft('')
+                    setGenError('')
+                  }
+                }}
               />
               <button
                 disabled={genKeyDraft.trim() === ''}
@@ -361,7 +384,7 @@ function Editor({ design, onChange, onNewProject }: Props) {
                 }}
               />
               <button disabled={genBusy || genPrompt.trim() === ''} onClick={() => void runGenerate()}>
-                {genBusy ? '✨ Thinking…' : genHistory.length === 0 ? '✨ Generate' : '✨ Refine'}
+                {genBusy ? genStatus || '✨ Thinking…' : genHistory.length === 0 ? '✨ Generate' : '✨ Refine'}
               </button>
               {genHistory.length > 0 && !genBusy && (
                 <button onClick={() => setGenHistory([])} title="Forget the conversation, start a new idea">
