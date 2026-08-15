@@ -8,6 +8,14 @@ import { designToHeader } from './exportHeader.ts'
 import { designToShareUrl } from './share.ts'
 import { getToken, publishDesign, setToken, clearToken, TOKEN_HELP_URL } from './publish.ts'
 import { PRESET_PALETTES } from './palette.ts'
+import {
+  API_KEY_HELP_URL,
+  clearApiKey,
+  generateAnimation,
+  getApiKey,
+  setApiKey,
+  type GenTurn,
+} from './generate.ts'
 
 interface Props {
   design: Design
@@ -49,6 +57,12 @@ function Editor({ design, onChange, onNewProject }: Props) {
   const [confirmNew, setConfirmNew] = useState(false)
   const [preview, setPreview] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [genOpen, setGenOpen] = useState(false)
+  const [genPrompt, setGenPrompt] = useState('')
+  const [genBusy, setGenBusy] = useState(false)
+  const [genError, setGenError] = useState('')
+  const [genHistory, setGenHistory] = useState<GenTurn[]>([])
+  const [genKeyDraft, setGenKeyDraft] = useState('')
   const [pubState, setPubState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle')
   const [pubError, setPubError] = useState('')
   const [askToken, setAskToken] = useState(false)
@@ -185,6 +199,40 @@ function Editor({ design, onChange, onNewProject }: Props) {
 
   const exportHeader = () => download('animation.h', designToHeader(design), 'text/x-c')
 
+  const runGenerate = async () => {
+    const prompt = genPrompt.trim()
+    if (prompt === '' || genBusy) return
+    setGenBusy(true)
+    setGenError('')
+    const history: GenTurn[] = [...genHistory, { role: 'user', content: prompt }]
+    try {
+      const { design: generated, raw } = await generateAnimation(
+        getApiKey()!,
+        design.cols,
+        design.rows,
+        history,
+      )
+      setGenHistory([...history, { role: 'assistant', content: raw }])
+      setGenPrompt('')
+      // Wholesale design swap: undo history would pair old frames with the new
+      // palette/dims, so clear it — same as opening a different project.
+      setUndoStack([])
+      setRedoStack([])
+      setFrameIndex(0)
+      onChange(generated)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Generation failed.'
+      if (/401|invalid.*api.*key|authentication/i.test(msg)) {
+        clearApiKey()
+        setGenError('API key rejected — enter it again.')
+      } else {
+        setGenError(msg)
+      }
+    } finally {
+      setGenBusy(false)
+    }
+  }
+
   const publish = async () => {
     const token = getToken()
     if (token === null) {
@@ -237,6 +285,13 @@ function Editor({ design, onChange, onNewProject }: Props) {
           {design.frames.length}
         </span>
         <button
+          className={genOpen ? 'active' : ''}
+          onClick={() => setGenOpen(!genOpen)}
+          title="Describe an animation and Claude builds it"
+        >
+          ✨ Describe
+        </button>
+        <button
           onClick={() => void publish()}
           disabled={pubState === 'busy'}
           title="Publish this design to the wall (commits current.json)"
@@ -260,6 +315,64 @@ function Editor({ design, onChange, onNewProject }: Props) {
           <button onClick={() => setConfirmNew(true)}>Projects…</button>
         )}
       </header>
+
+      {genOpen && (
+        <div className="pub-banner gen-panel">
+          {getApiKey() === null ? (
+            <>
+              <span>
+                Describing animations needs an Anthropic API key —{' '}
+                <a href={API_KEY_HELP_URL} target="_blank" rel="noreferrer">
+                  create one here
+                </a>
+                . It stays in this browser and is only sent to Anthropic.
+              </span>
+              <input
+                type="password"
+                placeholder="sk-ant-…"
+                value={genKeyDraft}
+                onChange={(e) => setGenKeyDraft(e.target.value)}
+              />
+              <button
+                disabled={genKeyDraft.trim() === ''}
+                onClick={() => {
+                  setApiKey(genKeyDraft)
+                  setGenKeyDraft('')
+                  setGenError('')
+                }}
+              >
+                Save key
+              </button>
+            </>
+          ) : (
+            <>
+              <input
+                type="text"
+                placeholder={
+                  genHistory.length === 0
+                    ? 'Describe an animation… e.g. "rain falling on a city skyline"'
+                    : 'Refine it… e.g. "slower, and make the rain blue"'
+                }
+                value={genPrompt}
+                disabled={genBusy}
+                onChange={(e) => setGenPrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void runGenerate()
+                }}
+              />
+              <button disabled={genBusy || genPrompt.trim() === ''} onClick={() => void runGenerate()}>
+                {genBusy ? '✨ Thinking…' : genHistory.length === 0 ? '✨ Generate' : '✨ Refine'}
+              </button>
+              {genHistory.length > 0 && !genBusy && (
+                <button onClick={() => setGenHistory([])} title="Forget the conversation, start a new idea">
+                  Start over
+                </button>
+              )}
+            </>
+          )}
+          {genError !== '' && <span className="gen-error">{genError}</span>}
+        </div>
+      )}
 
       {pubState === 'error' && <div className="pub-banner error">{pubError}</div>}
       {askToken && (

@@ -270,6 +270,21 @@ button.primary {
   min-width: 12rem;
 }
 
+.gen-panel input[type='text'] {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.35rem 0.5rem;
+  flex: 1;
+  min-width: 14rem;
+}
+
+.gen-error {
+  color: #ff6b60;
+}
+
 .toolbar {
   display: flex;
   justify-content: space-between;
