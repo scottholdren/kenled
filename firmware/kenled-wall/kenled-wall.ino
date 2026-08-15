@@ -198,6 +198,9 @@ void pollTask(void*) {
       HTTPClient http;
       http.begin(client, REF_URL);
       http.setUserAgent("kenled-wall");
+#ifdef GH_TOKEN
+      http.addHeader("Authorization", "Bearer " GH_TOKEN);
+#endif
       if (refEtag.length() > 0) http.addHeader("If-None-Match", refEtag);
       const char* keys[] = {"ETag"};
       http.collectHeaders(keys, 1);
