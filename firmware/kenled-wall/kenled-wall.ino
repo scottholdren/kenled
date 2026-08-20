@@ -42,7 +42,7 @@
 #ifndef FLIP_Y
 #define FLIP_Y 0 // 1 if the chain's first row is the BOTTOM of the grid
 #endif
-#define BRIGHTNESS 96
+#define BRIGHTNESS 48
 #define MAX_MILLIAMPS 8000 // FastLED's estimate assumes 5V; still a sane cap
 
 #define REF_URL "https://api.github.com/repos/scottholdren/kenled/git/ref/heads/wall"
