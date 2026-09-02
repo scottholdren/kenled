@@ -14,6 +14,7 @@
 
 #include <FastLED.h>
 #include <WiFi.h>
+#include <WiFiMulti.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
@@ -72,6 +73,9 @@ struct Anim {
 };
 
 CRGB leds[NUM_LEDS];
+#if UPDATE_MODE != MODE_OFFLINE
+WiFiMulti wifiMulti; // connects to whichever configured network is present
+#endif
 Anim* current = nullptr;
 Anim* pending = nullptr;
 SemaphoreHandle_t pendingMux;
@@ -186,11 +190,7 @@ void pollTask(void*) {
   String lastSha = "";
   for (;;) {
     if (WiFi.status() != WL_CONNECTED) {
-      WiFi.disconnect();
-      WiFi.begin(WIFI_SSID, WIFI_PASS);
-      for (int i = 0; i < 20 && WiFi.status() != WL_CONNECTED; i++) {
-        vTaskDelay(pdMS_TO_TICKS(500));
-      }
+      wifiMulti.run(10000); // tries all configured networks, best signal first
     }
     if (WiFi.status() == WL_CONNECTED) {
       WiFiClientSecure client;
@@ -283,6 +283,10 @@ void setup() {
 
 #if UPDATE_MODE != MODE_OFFLINE
   WiFi.mode(WIFI_STA);
+  wifiMulti.addAP(WIFI_SSID, WIFI_PASS);
+#ifdef WIFI_SSID2
+  wifiMulti.addAP(WIFI_SSID2, WIFI_PASS2);
+#endif
   xTaskCreate(pollTask, "poll", 8192, nullptr, 1, nullptr);
 #endif
 }
